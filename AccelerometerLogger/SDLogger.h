@@ -16,10 +16,9 @@
 class SDLogger {
 public:
   SDLogger(void);
-  int begin();
-
+  bool begin();
+  bool create();
 protected:
-  Sd2Card card;
-  SdVolume volume;
-  SdFile root;
+  File datafile;
+  File metafile;
 };
