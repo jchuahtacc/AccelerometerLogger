@@ -1,4 +1,6 @@
 #include "SDLogger.h"
+#include "Adafruit_LIS3DH.h"
+#include <Adafruit_Sensor.h>
 
 #define STATUS_LED 0
 
@@ -7,21 +9,38 @@ void readerError(void);
 void fileError(void);
 
 SDLogger logger = SDLogger();
+Adafruit_LIS3DH accel = Adafruit_LIS3DH();
+
+int eventCount = 0;
+int flushCount = 0;
+long start = 0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
 
   Serial.begin(9600);
   if (!logger.begin()) readerError();
-  Serial.println("SD card is ready to go");
   if (!logger.create()) fileError();
   // the #0 LED is active LOW
+  Serial.println("SD initialized");
+  if (! accel.begin(0x18)) accelError();
+  accel.setRange(LIS3DH_RANGE_4_G);
   digitalWrite(STATUS_LED, LOW);
-  delay(3000);
+  start = millis();
 }
 
 void loop() {
-
+  if (eventCount < 100) {
+    accel.read();
+    logger.log(accel.x_g, accel.y_g, accel.z_g);
+    eventCount++;
+  } else {
+    long now = millis();
+    Serial.print("time elapsed: " );
+    Serial.println(now - start);
+    logger.finish();
+    finishStatus();
+  }
 }
 
 void flashStatus() {
@@ -46,3 +65,22 @@ void fileError() {
     delay(1000);
   }
 }
+
+void accelError() {
+  Serial.println("Couldn't initialize accelerometer");
+  while (true) {
+    for (int i = 0; i < 4; i++) flashStatus();
+    delay(1000);
+  }
+}
+
+void finishStatus() {
+  Serial.println("Finished logging.");
+  while (true) {
+    flashStatus(); flashStatus();
+    delay(300);
+    flashStatus(); flashStatus();
+    delay(1000);
+  }
+}
+

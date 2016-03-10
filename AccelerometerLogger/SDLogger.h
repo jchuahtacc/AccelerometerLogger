@@ -18,6 +18,8 @@ public:
   SDLogger(void);
   bool begin();
   bool create();
+  void log(float, float, float);
+  void finish();
 protected:
   File datafile;
   File metafile;

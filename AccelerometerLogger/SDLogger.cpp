@@ -19,6 +19,10 @@ bool SDLogger::create() {
     sprintf(buff, "%04i", i);
     memcpy(&data_filename[4], buff, 4);
     memcpy(&meta_filename[4], buff, 4);
+    Serial.print("Trying ");
+    Serial.print(data_filename);
+    Serial.print(", ");
+    Serial.println(meta_filename);
     if (!SD.exists(data_filename) && !SD.exists(meta_filename)) {
       datafile = SD.open(data_filename, FILE_WRITE);
       metafile = SD.open(meta_filename, FILE_WRITE);
@@ -27,3 +31,17 @@ bool SDLogger::create() {
   }
   return false;
 }
+
+void SDLogger::log(float x_g, float y_g, float z_g) {
+  datafile.print(x_g);
+  datafile.print(",");
+  datafile.print(y_g);
+  datafile.print(",");
+  datafile.println(z_g);
+}
+
+void SDLogger::finish(void) {
+  datafile.flush();
+  datafile.close();
+}
+
