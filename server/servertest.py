@@ -2,11 +2,15 @@
 
 import SocketServer
 import time
+from threading import Thread
+#from multiprocessing import Process
 
 STATE_DISCONNECTED = 0;
 STATE_CONNECTED = 1;
 STATE_RUNNING = 2;
 STATE_STOPPED = 3;
+
+quit = False
 
 class AccelerometerClient(object):
     def __init__(self, socket):
@@ -26,12 +30,42 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         self.client = AccelerometerClient(self.request)
         clients[self.client.ip] = self.client
         print "New client: " + str(self.client.ip)
-    while True:
+    while not quit:
         self.data = self.request.recv(1024).strip()
         print "Client data " + self.data
         time.sleep(1)
 
+def print_menu():
+    print "(p)rint status"
+    print "(s)ignal start"
+    print "(h)alt data collection"
+    print "(w)rite data to disk"
+    print "(q)uit"
+
 if __name__ == "__main__":
   HOST, PORT = "192.168.0.101", 9999
   server = SocketServer.TCPServer((HOST, PORT), AccelerometerHandler)
-  server.serve_forever()
+  t = Thread (target=server.serve_forever)
+  t.start()
+  quit = False
+  try:
+    while not quit:
+      print_menu()
+      choice = raw_input("Enter choice letter: ")
+      if choice == "q":
+          print "chose quit"
+          quit = True
+      else:
+          print "didnt' choose quit"
+    quit = True
+    print "Calling server shutdown"
+    server.shutdown()
+    print "Joining thread"
+    t.join()
+    print "Goodbye!"
+    raise KeyboardInterrupt()
+  except KeyboardInterrupt:
+    quit = True
+    server.shutdown()
+    t.join()
+    print "Goodbye!"
