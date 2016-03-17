@@ -1,15 +1,17 @@
-#include "SDLogger.h"
-#include "Adafruit_LIS3DH.h"
+#include "utility/Adafruit_LIS3DH.h"
 #include <Adafruit_Sensor.h>
+#include <ESP8266WiFi.h>
+#include "StatusLED.h"
+#include "WifiWrapper.h"
 
 #define STATUS_LED 0
 
-// Function prototypes
-void readerError(void);
-void fileError(void);
+IPAddress server(192, 168, 0, 101);
+int port = 9999;
 
-SDLogger logger = SDLogger();
 Adafruit_LIS3DH accel = Adafruit_LIS3DH();
+StatusLED status = StatusLED(STATUS_LED);
+WifiWrapper wifi = WifiWrapper(STATUS_LED);
 
 int eventCount = 0;
 int flushCount = 0;
@@ -18,69 +20,29 @@ long start = 0;
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
 
-  Serial.begin(9600);
-  if (!logger.begin()) readerError();
-  if (!logger.create()) fileError();
-  // the #0 LED is active LOW
-  Serial.println("SD initialized");
-  if (! accel.begin(0x18)) accelError();
-  accel.setRange(LIS3DH_RANGE_4_G);
+  Serial.begin(115200);
+  if (!wifi.wifiConnect("codetacc", "codetacc")) {
+    status.blockingError(3, "Couldn't connect to WiFi");
+  } else {
+    Serial.println("Connected to Wifi!");
+    Serial.print("Local IP: ");
+    Serial.println(WiFi.localIP());
+  }
+  if (!wifi.serverConnect(server, port)) {
+    status.blockingError(4, "Couldn't connect to data server");
+  }
+  if (!accel.begin(0x18)) {
+    status.blockingError(5, "Couldn't find accelerometer");
+  }
+  accel.setRange(LIS3DH_RANGE_16_G);
   digitalWrite(STATUS_LED, LOW);
   start = millis();
 }
 
 void loop() {
-  if (eventCount < 100) {
-    accel.read();
-    logger.log(accel.x_g, accel.y_g, accel.z_g);
-    eventCount++;
-  } else {
-    long now = millis();
-    Serial.print("time elapsed: " );
-    Serial.println(now - start);
-    logger.finish();
-    finishStatus();
+  if (!wifi.send()) {
+    status.blockingError(6, "Couldn't send data to server");
   }
+  delay(700);
+  yield();
 }
-
-void flashStatus() {
-  digitalWrite(STATUS_LED, LOW);
-  delay(100);
-  digitalWrite(STATUS_LED, HIGH);
-  delay(100);
-}
-
-void readerError() {
-  Serial.println("Couldn't connect to SD card reader");
-  while (true) {
-    for (int i = 0; i < 2; i++) flashStatus();
-    delay(1000);
-  }
-}
-
-void fileError() {
-  Serial.println("Couldn't create a data file on the SD card");
-  while (true) {
-    for (int i = 0; i < 3; i++) flashStatus();
-    delay(1000);
-  }
-}
-
-void accelError() {
-  Serial.println("Couldn't initialize accelerometer");
-  while (true) {
-    for (int i = 0; i < 4; i++) flashStatus();
-    delay(1000);
-  }
-}
-
-void finishStatus() {
-  Serial.println("Finished logging.");
-  while (true) {
-    flashStatus(); flashStatus();
-    delay(300);
-    flashStatus(); flashStatus();
-    delay(1000);
-  }
-}
-
