@@ -97,7 +97,7 @@ bool Adafruit_LIS3DH::begin(uint8_t i2caddr) {
   // enable all axes, normal mode
   writeRegister8(LIS3DH_REG_CTRL1, 0x07);
   // 400Hz rate
-  setDataRate(LIS3DH_DATARATE_400_HZ);
+  setDataRate(LIS3DH_DATARATE_1_HZ);
 
   // High res & BDU enabled
   writeRegister8(LIS3DH_REG_CTRL4, 0x88);
@@ -136,7 +136,7 @@ void Adafruit_LIS3DH::read(void) {
     x = Wire.read(); x |= ((uint16_t)Wire.read()) << 8;
     y = Wire.read(); y |= ((uint16_t)Wire.read()) << 8;
     z = Wire.read(); z |= ((uint16_t)Wire.read()) << 8;
-  } 
+  }
   #ifndef __AVR_ATtiny85__
   else {
     if (_sck == -1)
@@ -182,7 +182,7 @@ int16_t Adafruit_LIS3DH::readADC(uint8_t adc) {
     Wire.endTransmission();
     Wire.requestFrom(_i2caddr, 2);
     value = Wire.read();  value |= ((uint16_t)Wire.read()) << 8;
-  } 
+  }
   #ifndef __AVR_ATtiny85__
   else {
     if (_sck == -1)
@@ -293,6 +293,16 @@ lis3dh_dataRate_t Adafruit_LIS3DH::getDataRate(void)
 
 /**************************************************************************/
 /*!
+    @brief  Returns true if any data is ready
+*/
+/**************************************************************************/
+bool Adafruit_LIS3DH::dataReady(void)
+{
+  return ((readRegister8(LIS3DH_REG_STATUS2) >> 3) & 0x01) == 1;
+}
+
+/**************************************************************************/
+/*!
     @brief  Sets the LIS3DH to store data in its FIFO buffer
 */
 /**************************************************************************/
@@ -383,7 +393,7 @@ void Adafruit_LIS3DH::writeRegister8(uint8_t reg, uint8_t value) {
     Wire.write((uint8_t)reg);
     Wire.write((uint8_t)value);
     Wire.endTransmission();
-  } 
+  }
   #ifndef __AVR_ATtiny85__
   else {
     if (_sck == -1)
@@ -413,7 +423,7 @@ uint8_t Adafruit_LIS3DH::readRegister8(uint8_t reg) {
 
     Wire.requestFrom(_i2caddr, 1);
     value = Wire.read();
-  }  
+  }
   #ifndef __AVR_ATtiny85__
   else {
     if (_sck == -1)

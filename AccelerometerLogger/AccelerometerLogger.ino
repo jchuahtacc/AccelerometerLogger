@@ -52,15 +52,21 @@ void loop() {
     status.blockingError(6, "Couldn't send data to server");
   }
   int command = wifi.getCommand();
-  Serial.print("Command: ");
-  Serial.println(command);
   switch (command) {
     case COMMAND_CONFIG_ERROR : configError(); break;
     case COMMAND_UNKNOWN : commandError(); break;
     case COMMAND_CONFIGURE : configureAccelerometer(); break;
     case COMMAND_KEEPALIVE : keepAlive(); break;
   }
-  delay(700);
+  if (accel.dataReady()) {
+    accel.read();
+    Serial.print(accel.x_g);
+    Serial.print(" ");
+    Serial.print(accel.y_g);
+    Serial.print(" ");
+    Serial.println(accel.z_g);
+  }
+  delay(1);
   yield();
 }
 

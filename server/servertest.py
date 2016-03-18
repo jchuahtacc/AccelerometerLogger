@@ -79,6 +79,8 @@ def print_menu():
     print "(q) quit"
 
 def configure():
+    global samplerate
+    global samplerange
     print "Choose a sample rate:"
     print "(a) 1 Hz"
     print "(b) 10 Hz"
