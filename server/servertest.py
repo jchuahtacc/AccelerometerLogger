@@ -41,16 +41,15 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         except Exception:
             print "Error configuring new client"
   def handle(self):
-    while not quit:
+    while not quit and not self.request.:
         self.data = self.request.recv(1024).strip()
         print "Client data " + self.data
         time.sleep(1)
 
 def broadcast(command):
-
-    ## exception here. don't know why yet.
-    for client in clients:
+    for key in clients:
         try:
+            client = clients[key]
             client.socket.sendall(command)
         except Exception:
             print "Error sending command to " + str(client.ip)
@@ -96,7 +95,7 @@ def write_data():
     pass
 
 if __name__ == "__main__":
-  HOST, PORT = "192.168.0.101", 9999
+  HOST, PORT = "192.168.1.101", 9999
   server = SocketServer.TCPServer((HOST, PORT), AccelerometerHandler)
   t = Thread (target=server.serve_forever)
   t.start()
