@@ -10,7 +10,13 @@ STATE_CONNECTED = 1;
 STATE_RUNNING = 2;
 STATE_STOPPED = 3;
 
+OPCODE_CONFIGURE = 'r'
+OPCODE_START = 's'
+OPCODE_HALT = 'h'
+
 quit = False
+samplerate = "b"
+samplerange = "a"
 
 class AccelerometerClient(object):
     def __init__(self, socket):
@@ -25,22 +31,69 @@ class AccelerometerClient(object):
 clients = dict()
 
 class AccelerometerHandler(SocketServer.BaseRequestHandler):
-  def handle(self):
+  def setup(self):
     if not (self.request.getpeername()[0] in clients):
         self.client = AccelerometerClient(self.request)
         clients[self.client.ip] = self.client
         print "New client: " + str(self.client.ip)
+        try:
+            self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
+        except Exception:
+            print "Error configuring new client"
+  def handle(self):
     while not quit:
         self.data = self.request.recv(1024).strip()
         print "Client data " + self.data
         time.sleep(1)
 
+def broadcast(command):
+
+    ## exception here. don't know why yet.
+    for client in clients:
+        try:
+            client.socket.sendall(command)
+        except Exception:
+            print "Error sending command to " + str(client.ip)
+
 def print_menu():
-    print "(p)rint status"
-    print "(s)ignal start"
-    print "(h)alt data collection"
-    print "(w)rite data to disk"
+    print "(a) configure accelerometers"
+    print "(b) print status"
+    print "(c) start data collection"
+    print "(d) halt data collection"
+    print "(e) write data to disk"
     print "(q)uit"
+
+def configure():
+    print "Choose a sample rate:"
+    print "(a) 1 Hz"
+    print "(b) 10 Hz"
+    print "(c) 25 Hz"
+    print "(d) 50 Hz"
+    print "(e) 100 Hz"
+    print "(f) 200 Hz"
+    print "(g) 400 Hz"
+    samplerate = raw_input("Sample rate selection: ").lower()
+    print "Choose a sample range:"
+    print "(a) 2G"
+    print "(b) 4G"
+    print "(c) 8G"
+    print "(d) 16G"
+    samplerange = raw_input("Sample range selection: ").lower()
+    pass
+    cmdstring = OPCODE_CONFIGURE + samplerate + samplerange
+    broadcast(cmdstring)
+
+def print_status():
+    pass
+
+def signal_start():
+    pass
+
+def halt_data_collection():
+    pass
+
+def write_data():
+    pass
 
 if __name__ == "__main__":
   HOST, PORT = "192.168.0.101", 9999
@@ -51,13 +104,19 @@ if __name__ == "__main__":
   try:
     while not quit:
       print_menu()
-      choice = raw_input("Enter choice letter: ")
-      if choice == "q":
-          print "chose quit"
-          quit = True
-      else:
-          print "didnt' choose quit"
-    quit = True
+      choice = raw_input("Enter choice letter: ").lower()
+      if choice == 'a':
+        configure()
+      elif choice == 'b':
+        print_status()
+      elif choice == 'c':
+        signal_start()
+      elif choice == 'd':
+        halt_data_collection()
+      elif choice == 'e':
+        write_data()
+      elif choice == 'q':
+        quit = True
     print "Calling server shutdown"
     server.shutdown()
     print "Joining thread"

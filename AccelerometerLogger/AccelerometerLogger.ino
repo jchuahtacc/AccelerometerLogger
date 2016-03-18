@@ -13,6 +13,11 @@ Adafruit_LIS3DH accel = Adafruit_LIS3DH();
 StatusLED status = StatusLED(STATUS_LED);
 WifiWrapper wifi = WifiWrapper(STATUS_LED);
 
+// Method prototypes
+void commandError(void);
+void configError(void);
+void configureAccelerometer(void);
+
 int eventCount = 0;
 int flushCount = 0;
 long start = 0;
@@ -43,6 +48,41 @@ void loop() {
   if (!wifi.send()) {
     status.blockingError(6, "Couldn't send data to server");
   }
+  switch (wifi.getCommand()) {
+    case COMMAND_CONFIG_ERROR : configError(); break;
+    case COMMAND_UNKNOWN : commandError(); break;
+    case COMMAND_CONFIGURE : configureAccelerometer(); break;
+  }
   delay(700);
   yield();
 }
+
+void commandError() {
+  Serial.println("Got a bad command from the server");
+}
+
+void configError() {
+  Serial.println("Got a bad configuration parameter from the server");
+}
+
+void configureAccelerometer() {
+  Serial.println("Accelerometer configuration requested");
+  switch (wifi.requestedRate) {
+    case CONFIG_1HZ : Serial.println("Rate 1Hz"); accel.setDataRate(LIS3DH_DATARATE_1_HZ); break;
+    case CONFIG_10HZ : Serial.println("Rate 10Hz"); accel.setDataRate(LIS3DH_DATARATE_10_HZ); break;
+    case CONFIG_25HZ : Serial.println("Rate 25Hz"); accel.setDataRate(LIS3DH_DATARATE_25_HZ); break;
+    case CONFIG_50HZ : Serial.println("Rate 50Hz"); accel.setDataRate(LIS3DH_DATARATE_50_HZ); break;
+    case CONFIG_100HZ : Serial.println("Rate 100Hz"); accel.setDataRate(LIS3DH_DATARATE_100_HZ); break;
+    case CONFIG_200HZ : Serial.println("Rate 200Hz"); accel.setDataRate(LIS3DH_DATARATE_200_HZ); break;
+    case CONFIG_400HZ : Serial.println("Rate 400Hz"); accel.setDataRate(LIS3DH_DATARATE_400_HZ); break;
+    default : configError(); break;
+  }
+  switch (wifi.requestedRange) {
+    case CONFIG_2G : Serial.println("Range 2G"); accel.setRange(LIS3DH_RANGE_2_G); break;
+    case CONFIG_4G : Serial.println("Range 4G"); accel.setRange(LIS3DH_RANGE_4_G); break;
+    case CONFIG_8G : Serial.println("Range 8G"); accel.setRange(LIS3DH_RANGE_8_G); break;
+    case CONFIG_16G : Serial.println("Range 16G"); accel.setRange(LIS3DH_RANGE_16_G); break;
+    default : configError(); break;
+  }
+}
+

@@ -35,13 +35,36 @@ bool WifiWrapper::serverConnect(IPAddress ip, int port) {
   if (!client.connect(ip, port)) return false;
 //  memset(response_buffer, 0, 200);
 //  Serial.println("Sending hello");
-  client.println("Hello!");
+//  client.println("Hello!");
   return true;
 }
 
 bool WifiWrapper::send(void) {
   if (!client.connected()) return false;
-  client.println("Hello!");
+//  client.println("Hello!");
   return true;
+}
+
+int WifiWrapper::getCommand(void) {
+  if (!client.connected()) return COMMAND_DISCONNECTED;
+  if (!client.available()) return COMMAND_NONE;
+  char opcode = client.read();
+  // Serial.print("Opcode: " );
+  // Serial.println(opcode);
+  switch (opcode) {
+    case OPCODE_START : return COMMAND_START; break;
+    case OPCODE_HALT : return COMMAND_HALT; break;
+    case OPCODE_CONFIGURE : 
+      // Serial.println("Checking OPCODE_CONFIGURE");
+      if (!client.available()) return COMMAND_CONFIG_ERROR; 
+      if (!(client.peek() >= CONFIG_1HZ && client.peek() <= CONFIG_400HZ)) return COMMAND_CONFIG_ERROR;
+      requestedRate = client.read();
+      if (!(client.peek() >= CONFIG_2G && client.peek() <= CONFIG_16G)) return COMMAND_CONFIG_ERROR; 
+      requestedRange = client.read();
+      return COMMAND_CONFIGURE;
+      break;
+    default: return COMMAND_UNKNOWN; break;
+  }
+  return COMMAND_UNKNOWN;
 }
 
