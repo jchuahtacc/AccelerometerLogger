@@ -39,9 +39,15 @@ bool WifiWrapper::serverConnect(IPAddress ip, int port) {
   return true;
 }
 
+bool WifiWrapper::sendKeepalive(void) {
+  memset(send_buffer, 0, SEND_BUFFER_LENGTH);
+  send_buffer[0] = 'k';
+  send();
+}
+
 bool WifiWrapper::send(void) {
   if (!client.connected()) return false;
-//  client.println("Hello!");
+  client.println(send_buffer);
   return true;
 }
 
@@ -50,8 +56,9 @@ int WifiWrapper::getCommand(void) {
   if (!client.available()) return COMMAND_NONE;
   char opcode = client.read();
   // Serial.print("Opcode: " );
-  // Serial.println(opcode);
+  Serial.println(opcode);
   switch (opcode) {
+    case OPCODE_KEEPALIVE : return COMMAND_KEEPALIVE; break;
     case OPCODE_START : return COMMAND_START; break;
     case OPCODE_HALT : return COMMAND_HALT; break;
     case OPCODE_CONFIGURE : 

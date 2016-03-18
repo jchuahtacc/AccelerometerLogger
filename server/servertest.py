@@ -1,6 +1,7 @@
 #!/bin/python
 
 import SocketServer
+import socket
 import time
 from threading import Thread
 #from multiprocessing import Process
@@ -13,6 +14,7 @@ STATE_STOPPED = 3;
 OPCODE_CONFIGURE = 'r'
 OPCODE_START = 's'
 OPCODE_HALT = 'h'
+OPCODE_KEEPALIVE = 'k'
 
 quit = False
 samplerate = "b"
@@ -41,10 +43,24 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         except Exception:
             print "Error configuring new client"
   def handle(self):
-    while not quit and not self.request.:
-        self.data = self.request.recv(1024).strip()
-        print "Client data " + self.data
-        time.sleep(1)
+    disconnected = False
+    numTimeouts = 0
+    self.request.settimeout(2)
+    while not quit and not disconnected:
+        try:
+            self.data = self.request.recv(1024).strip()
+            numTimeouts = 0
+        except Exception as e:
+            if isinstance(e, socket.timeout):
+                numTimeouts = numTimeouts + 1
+                disconnected = numTimeouts > 5
+            else:
+                disconnected = True
+  def finish(self):
+      if self.client.ip in clients:
+          print str(self.client.ip) + " disconnected"
+          del clients[self.client.ip]
+          self.request.close()
 
 def broadcast(command):
     for key in clients:
@@ -60,7 +76,7 @@ def print_menu():
     print "(c) start data collection"
     print "(d) halt data collection"
     print "(e) write data to disk"
-    print "(q)uit"
+    print "(q) quit"
 
 def configure():
     print "Choose a sample rate:"

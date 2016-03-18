@@ -6,7 +6,7 @@
 
 #define STATUS_LED 0
 
-IPAddress server(192, 168, 0, 101);
+IPAddress server(192, 168, 1, 101);
 int port = 9999;
 
 Adafruit_LIS3DH accel = Adafruit_LIS3DH();
@@ -17,10 +17,13 @@ WifiWrapper wifi = WifiWrapper(STATUS_LED);
 void commandError(void);
 void configError(void);
 void configureAccelerometer(void);
+void keepAlive(void);
 
 int eventCount = 0;
 int flushCount = 0;
 long start = 0;
+
+long clientKeepalive = 0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
@@ -48,10 +51,14 @@ void loop() {
   if (!wifi.send()) {
     status.blockingError(6, "Couldn't send data to server");
   }
-  switch (wifi.getCommand()) {
+  int command = wifi.getCommand();
+  Serial.print("Command: ");
+  Serial.println(command);
+  switch (command) {
     case COMMAND_CONFIG_ERROR : configError(); break;
     case COMMAND_UNKNOWN : commandError(); break;
     case COMMAND_CONFIGURE : configureAccelerometer(); break;
+    case COMMAND_KEEPALIVE : keepAlive(); break;
   }
   delay(700);
   yield();
@@ -84,5 +91,10 @@ void configureAccelerometer() {
     case CONFIG_16G : Serial.println("Range 16G"); accel.setRange(LIS3DH_RANGE_16_G); break;
     default : configError(); break;
   }
+}
+
+void keepAlive() {
+  Serial.println("Responding to keepalive request");
+  wifi.sendKeepalive();
 }
 
