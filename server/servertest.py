@@ -133,6 +133,7 @@ def write_data():
                 f.write(item)
                 f.write(',')
             f.write('\n')
+        client.events = list()
     f.flush()
     f.close()
     pass
