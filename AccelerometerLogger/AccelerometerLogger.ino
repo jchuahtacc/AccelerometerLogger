@@ -18,17 +18,23 @@ void commandError(void);
 void configError(void);
 void configureAccelerometer(void);
 void keepAlive(void);
+void startStreaming(void);
+void haltStreaming(void);
 
 int eventCount = 0;
 int flushCount = 0;
-long start = 0;
+long startTime = 0;
+bool sending = false;
 
-long clientKeepalive = 0;
+long lastKeepalive = 0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
 
   Serial.begin(115200);
+  if (!accel.begin(0x18)) {
+    status.blockingError(2, "Couldn't find accelerometer");
+  }  
   if (!wifi.wifiConnect("codetacc", "codetacc")) {
     status.blockingError(3, "Couldn't connect to WiFi");
   } else {
@@ -39,35 +45,46 @@ void setup() {
   if (!wifi.serverConnect(server, port)) {
     status.blockingError(4, "Couldn't connect to data server");
   }
-  if (!accel.begin(0x18)) {
-    status.blockingError(5, "Couldn't find accelerometer");
-  }
+
   accel.setRange(LIS3DH_RANGE_16_G);
   digitalWrite(STATUS_LED, LOW);
-  start = millis();
 }
 
 void loop() {
-  if (!wifi.send()) {
-    status.blockingError(6, "Couldn't send data to server");
-  }
   int command = wifi.getCommand();
   switch (command) {
     case COMMAND_CONFIG_ERROR : configError(); break;
     case COMMAND_UNKNOWN : commandError(); break;
     case COMMAND_CONFIGURE : configureAccelerometer(); break;
     case COMMAND_KEEPALIVE : keepAlive(); break;
+    case COMMAND_START : startStreaming(); break;
+    case COMMAND_HALT : haltStreaming(); break;
   }
   if (accel.dataReady()) {
     accel.read();
-    Serial.print(accel.x_g);
-    Serial.print(" ");
-    Serial.print(accel.y_g);
-    Serial.print(" ");
-    Serial.println(accel.z_g);
+    if (sending) {
+      if (!wifi.send(millis() - startTime, accel.x, accel.y, accel.z)) status.blockingError(6, "Couldn't send data to server");
+    }
+  }
+  if (millis() - lastKeepalive > 800) {
+    // Serial.println("Sending keepalive");
+    lastKeepalive = millis();
+    if (!sending) wifi.sendKeepalive();
   }
   delay(1);
   yield();
+}
+
+void startStreaming() {
+  Serial.println("Starting data streaming");
+  sending = true;
+  startTime = millis();
+}
+
+void haltStreaming() {
+  Serial.println("Halting data streaming");
+  sending = false;
+  wifi.flush();
 }
 
 void commandError() {

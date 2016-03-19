@@ -32,6 +32,10 @@ class AccelerometerClient(object):
 
 clients = dict()
 
+def chunk(l, n):
+    for i in xrange(0, len(l), n):
+        yield l[i:i+n]
+
 class AccelerometerHandler(SocketServer.BaseRequestHandler):
   def setup(self):
     if not (self.request.getpeername()[0] in clients):
@@ -50,6 +54,14 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         try:
             self.data = self.request.recv(1024).strip()
             numTimeouts = 0
+            if self.data == OPCODE_KEEPALIVE:
+                # print "Keep alive"
+                self.data = None
+            else:
+                if len(self.data) > 0:
+                    self.client.events.extend(chunk(self.data.split(' '), 4))
+                if len(self.client.events) > 30:
+                    pass
         except Exception as e:
             if isinstance(e, socket.timeout):
                 numTimeouts = numTimeouts + 1
@@ -104,9 +116,11 @@ def print_status():
     pass
 
 def signal_start():
+    broadcast(OPCODE_START)
     pass
 
 def halt_data_collection():
+    broadcast(OPCODE_HALT);
     pass
 
 def write_data():

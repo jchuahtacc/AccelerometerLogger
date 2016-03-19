@@ -30,14 +30,16 @@
 #define CONFIG_8G                     'c'
 #define CONFIG_16G                    'd'
 
-#define SEND_BUFFER_LENGTH            257
+#define SEND_BUFFER_LENGTH            1024
+#define SEND_BUFFER_WATERMARK         990
 
 class WifiWrapper {
 public:
   WifiWrapper(int);
   bool wifiConnect(const char*, const char *);
   bool serverConnect(IPAddress, int);
-  bool send(void);
+  bool send(long, int, int, int);
+  void flush(void);
   bool sendKeepalive();
   int getCommand(void);
   char requestedRate;
@@ -48,5 +50,7 @@ private:
   WiFiClient client;
   StatusLED led = NULL;
   char response_buffer[10];
-  char send_buffer[SEND_BUFFER_LENGTH];
+  char send_buffer[SEND_BUFFER_LENGTH] = { 0 };
+  int bufferPosition = 0;
+  int writesSinceFlush = 0;
 };

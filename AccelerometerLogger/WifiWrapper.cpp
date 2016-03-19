@@ -1,6 +1,7 @@
 #include <ESP8266WiFi.h>
 #include "WiFiWrapper.h"
 #include "StatusLED.h"
+#include <Esp.h>
 
 WifiWrapper::WifiWrapper(int ledPin) {
   led = StatusLED(ledPin);
@@ -40,15 +41,42 @@ bool WifiWrapper::serverConnect(IPAddress ip, int port) {
 }
 
 bool WifiWrapper::sendKeepalive(void) {
-  memset(send_buffer, 0, SEND_BUFFER_LENGTH);
-  send_buffer[0] = 'k';
-  send();
+  client.println(OPCODE_KEEPALIVE);
 }
 
-bool WifiWrapper::send(void) {
+bool WifiWrapper::send(long timestamp, int x, int y, int z) {
+  writesSinceFlush++;
   if (!client.connected()) return false;
-  client.println(send_buffer);
+  int currentLength = strlen(send_buffer);
+  send_buffer[currentLength] = ' ';
+  sprintf(&send_buffer[currentLength + 1], "%lu", timestamp);
+  currentLength = strlen(send_buffer);
+  send_buffer[currentLength] = ' ';
+  sprintf(&send_buffer[currentLength + 1], "%i", x);
+  currentLength = strlen(send_buffer);
+  send_buffer[currentLength] = ' ';
+  sprintf(&send_buffer[currentLength + 1], "%i", y);
+  currentLength = strlen(send_buffer);
+  send_buffer[currentLength] = ' ';
+  sprintf(&send_buffer[currentLength + 1], "%i", z);
+  currentLength = strlen(send_buffer);
+  send_buffer[currentLength] = ' ';
+  if (strlen(send_buffer) >= SEND_BUFFER_WATERMARK) {
+    flush();
+  }
   return true;
+}
+
+void WifiWrapper::flush(void) {
+  long startFlush = millis();
+  client.println(send_buffer);
+  memset(send_buffer, 0, SEND_BUFFER_LENGTH);
+  Serial.print("Flushing ");
+  Serial.print(writesSinceFlush);
+  Serial.print(" data points for ");
+  Serial.print(millis() - startFlush);
+  Serial.println("ms");
+  writesSinceFlush = 0;
 }
 
 int WifiWrapper::getCommand(void) {
@@ -56,7 +84,7 @@ int WifiWrapper::getCommand(void) {
   if (!client.available()) return COMMAND_NONE;
   char opcode = client.read();
   // Serial.print("Opcode: " );
-  Serial.println(opcode);
+  // Serial.println(opcode);
   switch (opcode) {
     case OPCODE_KEEPALIVE : return COMMAND_KEEPALIVE; break;
     case OPCODE_START : return COMMAND_START; break;

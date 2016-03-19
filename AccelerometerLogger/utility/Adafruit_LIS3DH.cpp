@@ -154,11 +154,11 @@ void Adafruit_LIS3DH::read(void) {
 
   }
   #endif
-
+/*
   x_g = (float)x / divider;
   y_g = (float)y / divider;
   z_g = (float)z / divider;
-
+*/
 }
 
 /**************************************************************************/
