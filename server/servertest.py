@@ -59,9 +59,7 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
                 self.data = None
             else:
                 if len(self.data) > 0:
-                    self.client.events.extend(chunk(self.data.split(' '), 4))
-                if len(self.client.events) > 30:
-                    pass
+                    self.client.events.extend(chunk(self.data.split(' '), 5))
         except Exception as e:
             if isinstance(e, socket.timeout):
                 numTimeouts = numTimeouts + 1
@@ -124,6 +122,19 @@ def halt_data_collection():
     pass
 
 def write_data():
+    filename = raw_input("Enter a filename for the data: ")
+    if filename.find('.csv') <= -1:
+        filename = filename.trim() + '.csv'
+    f = open(filename, 'w')
+    for key in clients:
+        client = clients[key]
+        for event in client.events:
+            for item in event:
+                f.write(item)
+                f.write(',')
+            f.write('\n')
+    f.flush()
+    f.close()
     pass
 
 if __name__ == "__main__":

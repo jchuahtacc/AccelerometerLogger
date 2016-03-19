@@ -48,8 +48,9 @@ bool WifiWrapper::send(long timestamp, int x, int y, int z) {
   writesSinceFlush++;
   if (!client.connected()) return false;
   int currentLength = strlen(send_buffer);
-  send_buffer[currentLength] = ' ';
-  sprintf(&send_buffer[currentLength + 1], "%lu", timestamp);
+  send_buffer[currentLength] = 'e';
+  send_buffer[currentLength + 1] = ' ';
+  sprintf(&send_buffer[currentLength + 2], "%lu", timestamp);
   currentLength = strlen(send_buffer);
   send_buffer[currentLength] = ' ';
   sprintf(&send_buffer[currentLength + 1], "%i", x);
