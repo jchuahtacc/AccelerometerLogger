@@ -31,9 +31,12 @@ bool WifiWrapper::wifiConnect(const char* ssid, const char* password) {
   return true;
 }
 
-bool WifiWrapper::serverConnect(IPAddress ip, int port) {
+bool WifiWrapper::serverConnect(IPAddress ip, int cport, int dport) {
+  serverIp = ip;
+  controlPort = cport;
+  dataPort = dport;
   Serial.println("Attempting to connect client");
-  if (!client.connect(ip, port)) return false;
+  if (!client.connect(ip, controlPort)) return false;
 //  memset(response_buffer, 0, 200);
 //  Serial.println("Sending hello");
 //  client.println("Hello!");
@@ -41,7 +44,9 @@ bool WifiWrapper::serverConnect(IPAddress ip, int port) {
 }
 
 bool WifiWrapper::sendKeepalive(void) {
+  if (!client.connected()) return false;
   client.println(OPCODE_KEEPALIVE);
+  return true;
 }
 
 bool WifiWrapper::send(long timestamp, int x, int y, int z) {
@@ -70,7 +75,13 @@ bool WifiWrapper::send(long timestamp, int x, int y, int z) {
 
 void WifiWrapper::flush(void) {
   long startFlush = millis();
+  /*
   client.println(send_buffer);
+  */
+  udp.beginPacket(serverIp, dataPort);
+  udp.write(send_buffer, strlen(send_buffer));
+  udp.endPacket();
+  
   memset(send_buffer, 0, SEND_BUFFER_LENGTH);
   Serial.print("Flushing ");
   Serial.print(writesSinceFlush);

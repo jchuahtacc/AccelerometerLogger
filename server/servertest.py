@@ -19,6 +19,7 @@ OPCODE_KEEPALIVE = 'k'
 quit = False
 samplerate = "b"
 samplerange = "a"
+streamingData = False
 
 class AccelerometerClient(object):
     def __init__(self, socket):
@@ -35,6 +36,12 @@ clients = dict()
 def chunk(l, n):
     for i in xrange(0, len(l), n):
         yield l[i:i+n]
+
+class DataStreamHandler(SocketServer.BaseRequestHandler):
+    def handle(self):
+        data = self.request[0].strip()
+        client = clients[self.client_address[0]]
+        client.events.extend(chunk(data.split(' '), 5))
 
 class AccelerometerHandler(SocketServer.BaseRequestHandler):
   def setup(self):
@@ -53,23 +60,21 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
     while not quit and not disconnected:
         try:
             self.data = self.request.recv(1024).strip()
-            numTimeouts = 0
             if self.data == OPCODE_KEEPALIVE:
                 # print "Keep alive"
                 self.data = None
-            else:
-                if len(self.data) > 0:
-                    self.client.events.extend(chunk(self.data.split(' '), 5))
+                numTimeouts = 0
         except Exception as e:
-            if isinstance(e, socket.timeout):
-                numTimeouts = numTimeouts + 1
-                disconnected = numTimeouts > 5
-            else:
-                disconnected = True
+            if not streamingData:
+                if isinstance(e, socket.timeout):
+                    print "Timeout counter " + str(numTimeouts)
+                    numTimeouts = numTimeouts + 1
+                    disconnected = numTimeouts > 5
+                else:
+                    disconnected = True
   def finish(self):
       if self.client.ip in clients:
           print str(self.client.ip) + " disconnected"
-          del clients[self.client.ip]
           self.request.close()
 
 def broadcast(command):
@@ -115,10 +120,14 @@ def print_status():
 
 def signal_start():
     broadcast(OPCODE_START)
+    global streamingData
+    streamingData = True
     pass
 
 def halt_data_collection():
-    broadcast(OPCODE_HALT);
+    broadcast(OPCODE_HALT)
+    global streamingData
+    streamingData = False
     pass
 
 def write_data():
@@ -139,10 +148,13 @@ def write_data():
     pass
 
 if __name__ == "__main__":
-  HOST, PORT = "192.168.1.101", 9999
-  server = SocketServer.TCPServer((HOST, PORT), AccelerometerHandler)
-  t = Thread (target=server.serve_forever)
-  t.start()
+  HOST, CONTROL_PORT, DATA_PORT = "192.168.1.108", 9999, 9998
+  controlServer = SocketServer.TCPServer((HOST, CONTROL_PORT), AccelerometerHandler)
+  controlThread = Thread (target=controlServer.serve_forever)
+  controlThread.start()
+  dataServer = SocketServer.UDPServer((HOST, DATA_PORT), DataStreamHandler)
+  dataThread = Thread(target=dataServer.serve_forever)
+  dataThread.start()
   quit = False
   try:
     while not quit:
@@ -161,13 +173,17 @@ if __name__ == "__main__":
       elif choice == 'q':
         quit = True
     print "Calling server shutdown"
-    server.shutdown()
+    controlServer.shutdown()
+    dataSever.shutdown()
     print "Joining thread"
-    t.join()
+    controlThread.join()
+    dataThread.join()
     print "Goodbye!"
     raise KeyboardInterrupt()
   except KeyboardInterrupt:
     quit = True
-    server.shutdown()
-    t.join()
+    controlServer.shutdown()
+    dataServer.shutdown()
+    controlThread.join()
+    dataThread.join()
     print "Goodbye!"

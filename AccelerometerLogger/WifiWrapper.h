@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include <WiFiUdp.h>
 #include "StatusLED.h"
 
 #define MAX_TIMEOUT 30
@@ -37,7 +38,7 @@ class WifiWrapper {
 public:
   WifiWrapper(int);
   bool wifiConnect(const char*, const char *);
-  bool serverConnect(IPAddress, int);
+  bool serverConnect(IPAddress, int, int);
   bool send(long, int, int, int);
   void flush(void);
   bool sendKeepalive();
@@ -48,6 +49,10 @@ protected:
 
 private:
   WiFiClient client;
+  WiFiUDP udp;
+  IPAddress serverIp;
+  int controlPort;
+  int dataPort;
   StatusLED led = NULL;
   char response_buffer[10];
   char send_buffer[SEND_BUFFER_LENGTH] = { 0 };

@@ -6,8 +6,9 @@
 
 #define STATUS_LED 0
 
-IPAddress server(192, 168, 1, 101);
-int port = 9999;
+IPAddress server(192, 168, 1, 108);
+int controlPort = 9999;
+int dataPort = 9998;
 
 Adafruit_LIS3DH accel = Adafruit_LIS3DH();
 StatusLED status = StatusLED(STATUS_LED);
@@ -42,7 +43,7 @@ void setup() {
     Serial.print("Local IP: ");
     Serial.println(WiFi.localIP());
   }
-  if (!wifi.serverConnect(server, port)) {
+  if (!wifi.serverConnect(server, controlPort, dataPort)) {
     status.blockingError(4, "Couldn't connect to data server");
   }
 
@@ -69,7 +70,9 @@ void loop() {
   if (millis() - lastKeepalive > 800) {
     // Serial.println("Sending keepalive");
     lastKeepalive = millis();
-    if (!sending) wifi.sendKeepalive();
+    if (!sending) {
+      if (!wifi.sendKeepalive()) status.blockingError(6, "Keepalive couldn't be sent to server");
+    }
   }
   delay(1);
   yield();
