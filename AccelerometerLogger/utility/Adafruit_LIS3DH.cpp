@@ -252,8 +252,8 @@ void Adafruit_LIS3DH::setRange(lis3dh_range_t range)
   writeRegister8(LIS3DH_REG_CTRL4, r);
   if (range == LIS3DH_RANGE_16_G) divider = 2048;
   if (range == LIS3DH_RANGE_8_G) divider = 4096;
-  if (range == LIS3DH_RANGE_4_G) divider = 8190;
-  if (range == LIS3DH_RANGE_2_G) divider = 16380;
+  if (range == LIS3DH_RANGE_4_G) divider = 8192;
+  if (range == LIS3DH_RANGE_2_G) divider = 16384;
 
 }
 

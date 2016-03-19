@@ -17,9 +17,11 @@ OPCODE_HALT = 'h'
 OPCODE_KEEPALIVE = 'k'
 
 quit = False
-samplerate = "b"
-samplerange = "a"
+samplerate = "g"
+samplerange = "b"
 streamingData = False
+
+dividers = { "a" : 16380, "b" : 8192, "c" : 4096, "d" : 2048 }
 
 class AccelerometerClient(object):
     def __init__(self, socket):
@@ -138,8 +140,12 @@ def write_data():
     for key in clients:
         client = clients[key]
         for event in client.events:
+            event[0] = str(client.ip)
+            event[2] = float(event[2]) / dividers[samplerange]
+            event[3] = float(event[3]) / dividers[samplerange]
+            event[4] = float(event[4]) /dividers[samplerange]
             for item in event:
-                f.write(item)
+                f.write(str(item))
                 f.write(',')
             f.write('\n')
         client.events = list()
