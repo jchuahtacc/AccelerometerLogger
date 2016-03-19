@@ -6,10 +6,10 @@ import time
 from threading import Thread
 #from multiprocessing import Process
 
-STATE_DISCONNECTED = 0;
-STATE_CONNECTED = 1;
-STATE_RUNNING = 2;
-STATE_STOPPED = 3;
+STATE_DISCONNECTED = "DISCONNECTED";
+STATE_CONNECTED = "CONNECTED";
+STATE_RUNNING = "RUNNING";
+STATE_STOPPED = "STOPPED";
 
 OPCODE_CONFIGURE = 'r'
 OPCODE_START = 's'
@@ -22,6 +22,8 @@ samplerange = "b"
 streamingData = False
 
 dividers = { "a" : 16380, "b" : 8192, "c" : 4096, "d" : 2048 }
+rates = { "a" : "1 Hz", "b" : "10 Hz", "c" : "25 Hz", "d" : "50 Hz", "e" : "100 Hz", "f" : "200 Hz", "g": "400 Hz" }
+ranges = { "a" : "2G", "b" : "4G", "c" : "8G" , "d", "16G" }
 
 class AccelerometerClient(object):
     def __init__(self, socket):
@@ -55,6 +57,9 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
             self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
         except Exception:
             print "Error configuring new client"
+    else:
+        self.client = clients[self.request.getpeername()[0]]
+        self.client.state = STATE_CONNECTED
   def handle(self):
     disconnected = False
     numTimeouts = 0
@@ -77,13 +82,15 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
   def finish(self):
       if self.client.ip in clients:
           print str(self.client.ip) + " disconnected"
+          self.client.state = STATE_DISCONNECTED
           self.request.close()
 
-def broadcast(command):
+def broadcast(command, newstate):
     for key in clients:
         try:
             client = clients[key]
             client.socket.sendall(command)
+            client.state = newstate
         except Exception:
             print "Error sending command to " + str(client.ip)
 
@@ -118,18 +125,28 @@ def configure():
     broadcast(cmdstring)
 
 def print_status():
+    print "Accelerometer settings - " + ranges[samplerange] + " sampling range at " + rates[samplerate]
+    if streamingData:
+        print "Currently receiving data"
+    else:
+        print "Not currently receiving data"
+    for key in clients:
+        client = clients[key]
+        print str(client.ip) + ": " + client.state + " (" + str(len(client.events)) + " events recorded)"
     pass
 
 def signal_start():
-    broadcast(OPCODE_START)
+    broadcast(OPCODE_START, STATE_RUNNING)
     global streamingData
     streamingData = True
+    print "Started data collection"
     pass
 
 def halt_data_collection():
-    broadcast(OPCODE_HALT)
+    broadcast(OPCODE_HALT, STATE_CONNECTED)
     global streamingData
     streamingData = False
+    print "Halted data collection"
     pass
 
 def write_data():
@@ -143,7 +160,7 @@ def write_data():
             event[0] = str(client.ip)
             event[2] = float(event[2]) / dividers[samplerange]
             event[3] = float(event[3]) / dividers[samplerange]
-            event[4] = float(event[4]) /dividers[samplerange]
+            event[4] = float(event[4]) / dividers[samplerange]
             for item in event:
                 f.write(str(item))
                 f.write(',')
@@ -151,6 +168,7 @@ def write_data():
         client.events = list()
     f.flush()
     f.close()
+    print "Data written to " + filename
     pass
 
 if __name__ == "__main__":

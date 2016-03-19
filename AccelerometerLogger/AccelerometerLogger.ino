@@ -18,7 +18,6 @@ WifiWrapper wifi = WifiWrapper(STATUS_LED);
 void commandError(void);
 void configError(void);
 void configureAccelerometer(void);
-void keepAlive(void);
 void startStreaming(void);
 void haltStreaming(void);
 
@@ -57,7 +56,6 @@ void loop() {
     case COMMAND_CONFIG_ERROR : configError(); break;
     case COMMAND_UNKNOWN : commandError(); break;
     case COMMAND_CONFIGURE : configureAccelerometer(); break;
-    case COMMAND_KEEPALIVE : keepAlive(); break;
     case COMMAND_START : startStreaming(); break;
     case COMMAND_HALT : haltStreaming(); break;
   }
@@ -118,9 +116,3 @@ void configureAccelerometer() {
     default : configError(); break;
   }
 }
-
-void keepAlive() {
-  Serial.println("Responding to keepalive request");
-  wifi.sendKeepalive();
-}
-
