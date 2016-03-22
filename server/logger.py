@@ -1,9 +1,10 @@
-#!/bin/python
+#!/usr/bin/python
 
 import SocketServer
 import socket
 import time
 from threading import Thread
+import sys
 #from multiprocessing import Process
 
 HOST, CONTROL_PORT, DATA_PORT = "192.168.0.101", 9999, 9998
@@ -180,42 +181,55 @@ def write_data():
     print "Data written to " + filename
     pass
 
-if __name__ == "__main__":
-  controlServer = SocketServer.TCPServer((HOST, CONTROL_PORT), AccelerometerHandler)
-  controlThread = Thread (target=controlServer.serve_forever)
-  controlThread.start()
-  dataServer = SocketServer.UDPServer((HOST, DATA_PORT), DataStreamHandler)
-  dataThread = Thread(target=dataServer.serve_forever)
-  dataThread.start()
-  quit = False
+def runServer(host, controlPort, dataPort):
+  print "Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(dataPort)
   try:
-    while not quit:
-      print_menu()
-      choice = raw_input("Enter choice letter: ").lower()
-      if choice == 'a':
-        configure()
-      elif choice == 'b':
-        print_status()
-      elif choice == 'c':
-        signal_start()
-      elif choice == 'd':
-        halt_data_collection()
-      elif choice == 'e':
-        write_data()
-      elif choice == 'q':
+      controlServer = SocketServer.TCPServer((host, controlPort), AccelerometerHandler)
+      controlThread = Thread (target=controlServer.serve_forever)
+      controlThread.start()
+      dataServer = SocketServer.UDPServer((host, dataPort), DataStreamHandler)
+      dataThread = Thread(target=dataServer.serve_forever)
+      dataThread.start()
+      quit = False
+      try:
+        while not quit:
+          print_menu()
+          choice = raw_input("Enter choice letter: ").lower()
+          if choice == 'a':
+            configure()
+          elif choice == 'b':
+            print_status()
+          elif choice == 'c':
+            signal_start()
+          elif choice == 'd':
+            halt_data_collection()
+          elif choice == 'e':
+            write_data()
+          elif choice == 'q':
+            quit = True
+        print "Calling server shutdown"
+        controlServer.shutdown()
+        dataServer.shutdown()
+        print "Joining thread"
+        controlThread.join()
+        dataThread.join()
+        print "Goodbye!"
+        raise KeyboardInterrupt()
+      except KeyboardInterrupt:
         quit = True
-    print "Calling server shutdown"
-    controlServer.shutdown()
-    dataServer.shutdown()
-    print "Joining thread"
-    controlThread.join()
-    dataThread.join()
-    print "Goodbye!"
-    raise KeyboardInterrupt()
-  except KeyboardInterrupt:
-    quit = True
-    controlServer.shutdown()
-    dataServer.shutdown()
-    controlThread.join()
-    dataThread.join()
-    print "Goodbye!"
+        controlServer.shutdown()
+        dataServer.shutdown()
+        controlThread.join()
+        dataThread.join()
+        print "Goodbye!"
+  except:
+      print "Couldn't start server on the specified IP address and port"
+
+if __name__ == "__main__":
+  if len(sys.argv) > 1:
+    HOST = sys.argv[1]
+    if len(sys.argv) > 2:
+        CONTROL_PORT = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        DATA_PORT = int(sys.argv[3])
+  runServer(HOST, CONTROL_PORT, DATA_PORT)
