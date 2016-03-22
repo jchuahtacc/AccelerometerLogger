@@ -6,6 +6,8 @@ import time
 from threading import Thread
 #from multiprocessing import Process
 
+HOST, CONTROL_PORT, DATA_PORT = "192.168.0.101", 9999, 9998
+
 STATE_DISCONNECTED = "DISCONNECTED";
 STATE_CONNECTED = "CONNECTED";
 STATE_RUNNING = "RUNNING";
@@ -23,7 +25,7 @@ streamingData = False
 
 dividers = { "a" : 16380, "b" : 8192, "c" : 4096, "d" : 2048 }
 rates = { "a" : "1 Hz", "b" : "10 Hz", "c" : "25 Hz", "d" : "50 Hz", "e" : "100 Hz", "f" : "200 Hz", "g": "400 Hz" }
-ranges = { "a" : "2G", "b" : "4G", "c" : "8G" , "d", "16G" }
+ranges = { "a" : "2G", "b" : "4G", "c" : "8G" , "d" : "16G" }
 
 class AccelerometerClient(object):
     def __init__(self, socket):
@@ -60,6 +62,13 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
     else:
         self.client = clients[self.request.getpeername()[0]]
         self.client.state = STATE_CONNECTED
+        self.client.socket = self.request
+        print "Client reconnected: " + str(self.client.ip)
+        try:
+            self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
+        except Exception:
+            print "Error reconfiguring client upon reconnect"
+
   def handle(self):
     disconnected = False
     numTimeouts = 0
@@ -74,7 +83,6 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         except Exception as e:
             if not streamingData:
                 if isinstance(e, socket.timeout):
-                    print "Timeout counter " + str(numTimeouts)
                     numTimeouts = numTimeouts + 1
                     disconnected = numTimeouts > 5
                 else:
@@ -85,12 +93,13 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
           self.client.state = STATE_DISCONNECTED
           self.request.close()
 
-def broadcast(command, newstate):
+def broadcast(command, newstate=None):
     for key in clients:
         try:
             client = clients[key]
             client.socket.sendall(command)
-            client.state = newstate
+            if not newstate is None:
+                client.state = newstate
         except Exception:
             print "Error sending command to " + str(client.ip)
 
@@ -172,7 +181,6 @@ def write_data():
     pass
 
 if __name__ == "__main__":
-  HOST, CONTROL_PORT, DATA_PORT = "192.168.1.108", 9999, 9998
   controlServer = SocketServer.TCPServer((HOST, CONTROL_PORT), AccelerometerHandler)
   controlThread = Thread (target=controlServer.serve_forever)
   controlThread.start()
@@ -198,7 +206,7 @@ if __name__ == "__main__":
         quit = True
     print "Calling server shutdown"
     controlServer.shutdown()
-    dataSever.shutdown()
+    dataServer.shutdown()
     print "Joining thread"
     controlThread.join()
     dataThread.join()

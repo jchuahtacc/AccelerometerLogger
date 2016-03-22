@@ -6,8 +6,9 @@ class StatusLED {
 public:
   StatusLED(int);
   void flash();
+  void flash(int);
   void pulse(int);
-  void blockingError(int, const char *);
+  void blockingError(const char *);
   void on(void);
   void off(void);
 protected:

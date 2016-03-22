@@ -11,13 +11,13 @@ bool WifiWrapper::wifiConnect(const char* ssid, const char* password) {
   int times = 0;
   WiFi.begin(ssid, password);
   int status = WiFi.status();
-  while (status != WL_CONNECTED && times < MAX_TIMEOUT) {
+  while (!wifiConnected() && times < MAX_TIMEOUT) {
     switch (status) {
       case WL_NO_SHIELD : Serial.println("Couldn't find WiFi hardware!"); break;
       case WL_NO_SSID_AVAIL : Serial.println("Couldn't find the supplied SSID"); break;
-      case WL_CONNECT_FAILED : Serial.println("Couldn't connect to the supplised SSID"); break;
-      case WL_IDLE_STATUS : Serial.println("Attempting to connect"); break;
-      default : Serial.println("Waiting to connect");
+      case WL_CONNECT_FAILED : Serial.println("Couldn't connect to the supplied SSID"); break;
+      case WL_IDLE_STATUS : Serial.println("Attempting to connect to WiFi"); break;
+      default : Serial.println("Attempting to connect to WiFi");
     }
     status = WiFi.status();
     delay(800);
@@ -28,30 +28,40 @@ bool WifiWrapper::wifiConnect(const char* ssid, const char* password) {
   if (status != WL_CONNECTED && times >= MAX_TIMEOUT) {
     return false;
   }
+  Serial.println("WiFi Connected!");
   return true;
+}
+
+bool WifiWrapper::wifiConnected() {
+  return WiFi.status() == WL_CONNECTED;
 }
 
 bool WifiWrapper::serverConnect(IPAddress ip, int cport, int dport) {
   serverIp = ip;
   controlPort = cport;
   dataPort = dport;
-  Serial.println("Attempting to connect client");
+  Serial.println("Attempting to connect to server");
   if (!client.connect(ip, controlPort)) return false;
 //  memset(response_buffer, 0, 200);
 //  Serial.println("Sending hello");
 //  client.println("Hello!");
+  Serial.println("Server connected!");
   return true;
 }
 
+bool WifiWrapper::serverConnected() {
+  return client.connected();
+}
+
 bool WifiWrapper::sendKeepalive(void) {
-  if (!client.connected()) return false;
+  if (!serverConnected()) return false;
   client.println(OPCODE_KEEPALIVE);
   return true;
 }
 
 bool WifiWrapper::send(long timestamp, int x, int y, int z) {
   writesSinceFlush++;
-  if (!client.connected()) return false;
+  if (!serverConnected()) return false;
   int currentLength = strlen(send_buffer);
   send_buffer[currentLength] = 'e';
   send_buffer[currentLength + 1] = ' ';
@@ -92,7 +102,7 @@ void WifiWrapper::flush(void) {
 }
 
 int WifiWrapper::getCommand(void) {
-  if (!client.connected()) return COMMAND_DISCONNECTED;
+  if (!serverConnected()) return COMMAND_DISCONNECTED;
   if (!client.available()) return COMMAND_NONE;
   char opcode = client.read();
   // Serial.print("Opcode: " );

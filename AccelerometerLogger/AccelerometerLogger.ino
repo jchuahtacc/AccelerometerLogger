@@ -6,12 +6,14 @@
 
 #define STATUS_LED 0
 
-IPAddress server(192, 168, 1, 108);
+char* ssid = "codetacc";
+char* password = "codetacc";
+IPAddress server(192, 168, 0, 101);
 int controlPort = 9999;
 int dataPort = 9998;
 
 Adafruit_LIS3DH accel = Adafruit_LIS3DH();
-StatusLED status = StatusLED(STATUS_LED);
+StatusLED led = StatusLED(STATUS_LED);
 WifiWrapper wifi = WifiWrapper(STATUS_LED);
 
 // Method prototypes
@@ -30,54 +32,71 @@ long lastKeepalive = 0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
+  
 
   Serial.begin(115200);
   if (!accel.begin(0x18)) {
-    status.blockingError(2, "Couldn't find accelerometer");
+    led.blockingError("Couldn't find accelerometer");
   }  
-  if (!wifi.wifiConnect("codetacc", "codetacc")) {
-    status.blockingError(3, "Couldn't connect to WiFi");
-  } else {
-    Serial.println("Connected to Wifi!");
-    Serial.print("Local IP: ");
-    Serial.println(WiFi.localIP());
-  }
-  if (!wifi.serverConnect(server, controlPort, dataPort)) {
-    status.blockingError(4, "Couldn't connect to data server");
-  }
-
+  Serial.println("Accelerometer OK");
   accel.setRange(LIS3DH_RANGE_16_G);
   digitalWrite(STATUS_LED, LOW);
 }
 
 void loop() {
-  int command = wifi.getCommand();
-  switch (command) {
-    case COMMAND_CONFIG_ERROR : configError(); break;
-    case COMMAND_UNKNOWN : commandError(); break;
-    case COMMAND_CONFIGURE : configureAccelerometer(); break;
-    case COMMAND_START : startStreaming(); break;
-    case COMMAND_HALT : haltStreaming(); break;
-  }
-  if (accel.dataReady()) {
-    accel.read();
-    if (sending) {
-      if (!wifi.send(millis() - startTime, accel.x, accel.y, accel.z)) status.blockingError(6, "Couldn't send data to server");
+  if (!wifi.wifiConnected()) {
+    Serial.println("Wifi disconnected");
+    led.pulse(3);
+    delay(800);
+    yield();
+    wifi.wifiConnect(ssid, password);
+  } else {
+    if (!wifi.serverConnected()) {
+      Serial.println("Server disconnected...");
+      led.pulse(4);
+      delay(800);
+      yield();
+      wifi.serverConnect(server, controlPort, dataPort);
+    } else {
+      int command = wifi.getCommand();
+      switch (command) {
+        case COMMAND_CONFIG_ERROR : configError(); break;
+        case COMMAND_UNKNOWN : commandError(); break;
+        case COMMAND_CONFIGURE : configureAccelerometer(); break;
+        case COMMAND_START : startStreaming(); break;
+        case COMMAND_HALT : haltStreaming(); break;
+      }
+      led.on();
+      if (accel.dataReady()) {
+        accel.read();
+        if (sending) {
+          led.off();
+          if (!wifi.send(millis() - startTime, accel.x, accel.y, accel.z)) {
+            Serial.println("Couldn't send data to the server");
+            led.pulse(5);
+          }
+          led.on();
+        }
+      }
+      if (millis() - lastKeepalive > 800) {
+        // Serial.println("Sending keepalive");
+        lastKeepalive = millis();
+        if (!sending) {
+          if (!wifi.sendKeepalive()) {
+            Serial.println("Keepalive couldn't be sent to the server");
+            led.pulse(5);
+          }
+        }
+      }
+      delay(1);
+      yield();
     }
   }
-  if (millis() - lastKeepalive > 800) {
-    // Serial.println("Sending keepalive");
-    lastKeepalive = millis();
-    if (!sending) {
-      if (!wifi.sendKeepalive()) status.blockingError(6, "Keepalive couldn't be sent to server");
-    }
-  }
-  delay(1);
-  yield();
 }
 
 void startStreaming() {
   Serial.println("Starting data streaming");
+  led.flash(3);
   sending = true;
   startTime = millis();
 }
@@ -86,6 +105,7 @@ void haltStreaming() {
   Serial.println("Halting data streaming");
   sending = false;
   wifi.flush();
+  led.flash(3);
 }
 
 void commandError() {
@@ -115,4 +135,5 @@ void configureAccelerometer() {
     case CONFIG_16G : Serial.println("Range 16G"); accel.setRange(LIS3DH_RANGE_16_G); break;
     default : configError(); break;
   }
+  led.flash(3);
 }

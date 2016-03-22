@@ -15,6 +15,12 @@ void StatusLED::flash() {
   yield();
 }
 
+void StatusLED::flash(int times) {
+  for (int i = 0; i < times; i++) {
+    flash();
+  }
+}
+
 void StatusLED::pulse(int times) {
   for (int i = 0; i < times; i++) {
     flash(); flash();
@@ -23,10 +29,13 @@ void StatusLED::pulse(int times) {
   }
 }
 
-void StatusLED::blockingError(int times, const char * message) {
+void StatusLED::blockingError(const char * message) {
   Serial.println(message);
   while (true) {
-    for (int i = 0; i < times; i++) flash();
+    on();
+    delay(800);
+    yield();
+    off();
     delay(800);
     yield();
   }

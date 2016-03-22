@@ -38,7 +38,9 @@ class WifiWrapper {
 public:
   WifiWrapper(int);
   bool wifiConnect(const char*, const char *);
+  bool wifiConnected(void);
   bool serverConnect(IPAddress, int, int);
+  bool serverConnected(void);
   bool send(long, int, int, int);
   void flush(void);
   bool sendKeepalive();
