@@ -1,16 +1,25 @@
+// AccelerometerLogger.ino
+//
+// This firmware for the AccelerometerLogger project is designed to work
+// on an ESP8266 microcontroller with an LIS3DH accelerometer.
+//
+// Configure the variables below to reflect your WiFi SSID and password and
+// the IP address of the computer running the server
+
 #include "utility/Adafruit_LIS3DH.h"
 #include <Adafruit_Sensor.h>
 #include <ESP8266WiFi.h>
 #include "StatusLED.h"
 #include "WifiWrapper.h"
 
-#define STATUS_LED 0
-
-char* ssid = "codetacc";
-char* password = "codetacc";
-IPAddress server(192, 168, 0, 101);
+// Change these variables to reflect your configuration
+char* ssid = "codetacc";              // your WiFi access point
+char* password = "codetacc";          // your WiFi password
+IPAddress server(192, 168, 0, 101);   // your computer running the logger.py server
 int controlPort = 9999;
 int dataPort = 9998;
+
+#define STATUS_LED 0
 
 Adafruit_LIS3DH accel = Adafruit_LIS3DH();
 StatusLED led = StatusLED(STATUS_LED);
@@ -32,12 +41,12 @@ long lastKeepalive = 0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
-  
+
 
   Serial.begin(115200);
   if (!accel.begin(0x18)) {
     led.blockingError("Couldn't find accelerometer");
-  }  
+  }
   Serial.println("Accelerometer OK");
   accel.setRange(LIS3DH_RANGE_16_G);
   digitalWrite(STATUS_LED, LOW);
