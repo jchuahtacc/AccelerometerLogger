@@ -1,5 +1,19 @@
 #!/usr/bin/python
 
+# logger.py
+#
+# Accelerometer Logger server, for configuring and controlling accelerometers
+# and then saving the data received
+#
+# Sample usage:
+#
+# $ logger.py 192.168.1.100
+#
+# Starts the logger on the IP address 192.168.1.100 (assuming that's your network
+# port's IP address) with the service listening on ports 9999 and 9998
+#
+# Parameters: ip_address, control_port (default is 9999), data_port (default is 9998)
+
 import SocketServer
 import socket
 import time
