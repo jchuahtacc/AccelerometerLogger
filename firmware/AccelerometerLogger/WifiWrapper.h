@@ -36,9 +36,12 @@
 
 class WifiWrapper {
 public:
-  WifiWrapper(int);
+  WifiWrapper(int, const char*);
   bool wifiConnect(const char*, const char *);
   bool wifiConnected(void);
+  bool receiveServerInfo(void);
+  bool receivedValidServerInfo(void);
+  bool serverConnect(void);
   bool serverConnect(IPAddress, int, int);
   bool serverConnected(void);
   bool send(long, int, int, int);
@@ -52,12 +55,15 @@ protected:
 private:
   WiFiClient client;
   WiFiUDP udp;
+  WiFiUDP broadcastListener;
   IPAddress serverIp;
+  IPAddress blankIp;
   int controlPort;
   int dataPort;
   StatusLED led = NULL;
   char response_buffer[10];
   char send_buffer[SEND_BUFFER_LENGTH] = { 0 };
+  const char* station_id;
   int bufferPosition = 0;
   int writesSinceFlush = 0;
 };

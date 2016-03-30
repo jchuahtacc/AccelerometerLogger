@@ -13,17 +13,15 @@
 #include "WifiWrapper.h"
 
 // Change these variables to reflect your configuration
-char* ssid = "codetacc";              // your WiFi access point
-char* password = "codetacc";          // your WiFi password
-IPAddress server(192, 168, 0, 101);   // your computer running the logger.py server
-int controlPort = 9999;
-int dataPort = 9998;
+const char* ssid = "codetacc";              // your WiFi access point
+const char* password = "codetacc";          // your WiFi password
+const char* stationId = "codetacc";         // your accelerometer station ID
 
 #define STATUS_LED 0
 
 Adafruit_LIS3DH accel = Adafruit_LIS3DH();
 StatusLED led = StatusLED(STATUS_LED);
-WifiWrapper wifi = WifiWrapper(STATUS_LED);
+WifiWrapper wifi = WifiWrapper(STATUS_LED, stationId);
 
 // Method prototypes
 void commandError(void);
@@ -60,12 +58,16 @@ void loop() {
     yield();
     wifi.wifiConnect(ssid, password);
   } else {
-    if (!wifi.serverConnected()) {
+    if (!wifi.receivedValidServerInfo()) {
+      Serial.println("Waiting for server info");
+      wifi.receiveServerInfo();
+      Serial.println("Received server info");
+    } else if (!wifi.serverConnected()) {
       Serial.println("Server disconnected...");
       led.pulse(4);
       delay(800);
       yield();
-      wifi.serverConnect(server, controlPort, dataPort);
+      wifi.serverConnect();
     } else {
       int command = wifi.getCommand();
       switch (command) {
