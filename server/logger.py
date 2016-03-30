@@ -21,7 +21,7 @@ from threading import Thread
 import sys
 #from multiprocessing import Process
 
-HOST, CONTROL_PORT, DATA_PORT = "192.168.0.101", 9999, 9998
+HOST, CONTROL_PORT, DATA_PORT = "192.168.0.100", 9999, 9998
 
 STATE_DISCONNECTED = "DISCONNECTED";
 STATE_CONNECTED = "CONNECTED";
@@ -119,11 +119,12 @@ def broadcast(command, newstate=None):
             print "Error sending command to " + str(client.ip)
 
 def print_menu():
-    print "(a) configure accelerometers"
-    print "(b) print status"
-    print "(c) start data collection"
-    print "(d) halt data collection"
-    print "(e) write data to disk"
+    print "(a) announce server info"
+    print "(c) configure accelerometers"
+    print "(p) print status"
+    print "(s) start data collection"
+    print "(h) halt data collection"
+    print "(w) write data to disk"
     print "(q) quit"
 
 def configure():
@@ -147,6 +148,14 @@ def configure():
     pass
     cmdstring = OPCODE_CONFIGURE + samplerate + samplerange
     broadcast(cmdstring)
+
+def announce():
+    station_id = raw_input("What station ID would you like to broadcast? Capitalization matters! ")
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('', 0))
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    data = station_id + "," + str(CONTROL_PORT) + "," + str(DATA_PORT) + "\n"
+    s.sendto(data, ('<broadcast>', 9997))
 
 def print_status():
     print "Accelerometer settings - " + ranges[samplerange] + " sampling range at " + rates[samplerate]
@@ -210,14 +219,16 @@ def runServer(host, controlPort, dataPort):
           print_menu()
           choice = raw_input("Enter choice letter: ").lower()
           if choice == 'a':
-            configure()
-          elif choice == 'b':
-            print_status()
+            announce()
           elif choice == 'c':
+            configure()
+          elif choice == 'p':
+            print_status()
+          elif choice == 's':
             signal_start()
-          elif choice == 'd':
+          elif choice == 'h':
             halt_data_collection()
-          elif choice == 'e':
+          elif choice == 'w':
             write_data()
           elif choice == 'q':
             quit = True
