@@ -3,8 +3,9 @@
 // This firmware for the AccelerometerLogger project is designed to work
 // on an ESP8266 microcontroller with an LIS3DH accelerometer.
 //
-// Configure the variables below to reflect your WiFi SSID and password and
-// the IP address of the computer running the server
+// Configure the variables below to reflect your WiFi SSID and password.
+// Also, edit the stationID variable so that your accelerometer can listen
+// for server announcements
 
 #include "utility/Adafruit_LIS3DH.h"
 #include <Adafruit_Sensor.h>

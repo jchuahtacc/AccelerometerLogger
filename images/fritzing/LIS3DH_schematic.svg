@@ -1,0 +1,82 @@
+<svg width="212.59842" height="292.74802" xmlns="http://www.w3.org/2000/svg">
+ <desc>ADXL335_Accelerometer_Breakout__93edc3da__schematic__c49b1378471f6f3b951976fd44a0136f.svg</desc>
+
+ <metadata id="metadata5931">image/svg+xml</metadata>
+ <g>
+  <title>background</title>
+  <rect fill="none" id="canvas_background" height="294.74802" width="214.59842" y="-1" x="-1"/>
+ </g>
+ <g>
+  <title>Layer 1</title>
+  <rect fill="none" height="0" id="rect10582" y="-53.149654" width="0" x="0"/>
+  <g id="svg_1">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="text10512"/>
+  </g>
+  <g id="svg_2" transform="matrix(0,-1.0834009647369385,1,0,0,-2.0958386539205094) ">
+   <rect fill="none" stroke="#000000" stroke-width="2.535463" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="4" height="132.87402" id="rect10403" y="53.149605" width="212.59845" x="-238.17325"/>
+  </g>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="path10449" d="m26.574805,105.29919l26.57481,0"/>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="path10453" d="m26.574805,78.72437l26.57481,0"/>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="path10461" d="m53.149615,52.14956l-26.574803,0"/>
+  <g id="svg_3">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="text10504">
+    <text id="tspan10506" y="55.692916" x="56.692916">Vin</text>
+   </g>
+  </g>
+  <g id="svg_4">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="text10508">
+    <text id="tspan10510" y="82.267719" x="56.692916">3Vo</text>
+   </g>
+  </g>
+  <text font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="tspan10514" y="108.84253" x="56.692913">GND</text>
+  <rect fill="none" height="7.086614" id="connector1pin" y="48.606239" width="7.086614" x="23.031506"/>
+  <rect fill="none" height="7.086614" id="connector2pin" y="75.181076" width="7.086614" x="23.031506"/>
+  <rect fill="none" height="7.086614" id="connector3pin" y="101.75592" width="7.086614" x="23.031506"/>
+  <g id="svg_5">
+   <g font-size="8px" font-style="normal" font-weight="normal" text-anchor="middle" fill="#000000" font-family="OCR A Std" id="text4619">
+    <text font-size="18px" font-style="normal" font-weight="normal" font-family="Droid Sans" id="tspan4621" y="119.826755" x="132.874013">LIS3DH</text>
+    <g font-size="18px" font-style="normal" font-weight="normal" font-family="Droid Sans" id="text4046">
+     <text font-size="14px" id="tspan12352" y="135.77191" x="132.874013">ACCELERATION</text>
+    </g>
+    <g font-size="18px" font-style="normal" font-weight="normal" font-family="Droid Sans" id="text12354">
+     <text font-size="14px" id="tspan12356" y="151.36366" x="132.874013">SENSOR</text>
+    </g>
+   </g>
+  </g>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="path12324" d="m26.574805,185.02363l26.57481,0"/>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="path12326" d="m26.574805,158.44882l26.57481,0"/>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="path12328" d="m53.149615,131.87401l-26.574803,0"/>
+  <g id="svg_6">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="g12330">
+    <text id="text12332" y="135.417347" x="56.692917">SCL</text>
+   </g>
+  </g>
+  <g id="svg_7">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="g12334">
+    <text id="text12336" y="161.992157" x="56.692917">SDA</text>
+   </g>
+  </g>
+  <rect fill="none" height="7.086614" id="connector4pin" y="128.3307" width="7.086614" x="23.031506"/>
+  <rect fill="none" height="7.086614" id="connector5pin" y="154.90553" width="7.086614" x="23.031506"/>
+  <rect fill="none" height="7.086614" id="connector6pin" y="181.48038" width="7.086614" x="23.031506"/>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="path12346" d="m26.574805,211.59843l26.57481,0"/>
+  <rect fill="none" height="7.086614" id="connector7pin" y="208.05518" width="7.086614" x="23.031506"/>
+  <path fill="none" stroke="#000000" stroke-width="3" stroke-miterlimit="4" stroke-dashoffset="0" id="svg_8" d="m26.574805,236.080514l26.57481,0"/>
+  <rect fill="none" height="7.086614" id="connector8pin" y="232.537264" width="7.086614" x="23.031506"/>
+  <g id="svg_12">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="svg_11">
+    <text id="svg_10" y="188.254757" x="57.138046">SDO</text>
+   </g>
+  </g>
+  <g id="svg_15">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="svg_14">
+    <text id="svg_13" y="214.962486" x="57.583174">CS</text>
+   </g>
+  </g>
+  <g id="svg_18">
+   <g font-size="10px" font-style="normal" font-weight="normal" text-anchor="start" fill="#000000" font-family="Droid Sans" id="svg_17">
+    <text id="svg_16" y="239.444572" x="58.918561">INT</text>
+   </g>
+  </g>
+ </g>
+</svg>

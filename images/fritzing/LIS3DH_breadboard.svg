@@ -1,0 +1,186 @@
+<svg width="85.5" height="76.5" xmlns="http://www.w3.org/2000/svg">
+ <desc>ADXL335_Accelerometer_Breakout__93edc3da__breadboard__cb74eeffa8f5fca03dd81eea12ebba67.svg</desc>
+ <defs>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14232"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500019" y1="0.500019" id="linearGradient14234"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14236"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500021" y1="0.500021" id="linearGradient14238"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14250"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500019" y1="0.500019" id="linearGradient14252"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14254"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500021" y1="0.500021" id="linearGradient14256"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14268"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500019" y1="0.500019" id="linearGradient14270"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14272"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500021" y1="0.500021" id="linearGradient14274"/>
+  <linearGradient x2="1.28125" x1="-0.3125" y2="1.125" y1="0.1875" id="linearGradient14290"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500021" y1="0.500021" id="linearGradient14315"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14318"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.500019" y1="0.500019" id="linearGradient14321"/>
+  <linearGradient x2="0.999999" x1="0" y2="0.499995" y1="0.499995" id="linearGradient14324"/>
+ </defs>
+ <metadata id="metadata13579">image/svg+xml</metadata>
+ <g>
+  <title>background</title>
+  <rect fill="none" id="canvas_background" height="78.5" width="87.5" y="-1" x="-1"/>
+ </g>
+ <g>
+  <title>Layer 1</title>
+  <g id="svg_1">
+   <g display="inline" id="layer1"/>
+  </g>
+  <g id="svg_2">
+   <g display="inline" id="layer3"/>
+  </g>
+  <g id="svg_3">
+   <g display="inline" id="layer4"/>
+  </g>
+  <g id="svg_4">
+   <g id="layer5"/>
+  </g>
+  <g id="svg_5">
+   <g id="layer6"/>
+  </g>
+  <path fill="#075c79" id="rect14130" d="m14.662945,4.5c-5.630272,0 -10.162945,4.014 -10.162945,9l0,49.5c0,4.986 4.532674,9 10.162945,9l55.896199,0c5.630272,0 10.162945,-4.014 10.162945,-9l0,-49.5c0,-4.986 -4.532674,-9 -10.162945,-9l-55.896199,0zm0,3.15625c3.648351,0 6.598857,2.61288 6.598857,5.84375c0,3.23087 -2.950506,5.84375 -6.598857,5.84375c-3.648351,0 -6.598857,-2.61288 -6.598857,-5.84375c0,-3.23087 2.950506,-5.84375 6.598857,-5.84375zm55.896199,0c3.648351,0 6.598857,2.61288 6.598857,5.84375c0,3.23087 -2.950506,5.84375 -6.598857,5.84375c-3.648351,0 -6.598857,-2.61288 -6.598857,-5.84375c0,-3.23087 2.950506,-5.84375 6.598857,-5.84375z"/>
+  <g id="svg_7">
+   <path fill="none" stroke="#ecc98a" stroke-width="1.8" stroke-miterlimit="4" id="path6949" d="m20.44024,13.5a5.85,5.85 0 1 1 -11.7,0a5.85,5.85 0 1 1 11.7,0z"/>
+  </g>
+  <g id="svg_8">
+   <path fill="none" stroke="#ecc98a" stroke-width="1.8" stroke-miterlimit="4" id="path14119" d="m76.382567,13.5a5.85,5.85 0 1 1 -11.7,0a5.85,5.85 0 1 1 11.7,0z"/>
+  </g>
+  <g id="svg_9">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="path14122" d="m13.5,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <g id="svg_10">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="path14124" d="m22.5,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <g id="svg_11">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="path14126" d="m31.5,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <g id="svg_12">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="path14128" d="m40.5,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <g id="svg_13">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="path14139" d="m49.5,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <g id="svg_14">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="path14141" d="m58.5,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <g id="svg_15">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="path14143" d="m76.221919,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <rect fill="#f1d083" height="2.7" id="connector1pin" y="61.650002" width="2.7" x="9.9"/>
+  <rect fill="#f1d083" height="2.7" id="connector2pin" y="61.650002" width="2.7" x="18.9"/>
+  <rect fill="#f1d083" height="2.7" id="connector3pin" y="61.650002" width="2.7" x="27.9"/>
+  <rect fill="#f1d083" height="2.7" id="connector4pin" y="61.650002" width="2.7" x="36.900002"/>
+  <rect fill="#f1d083" height="2.7" id="connector5pin" y="61.650002" width="2.7" x="45.900002"/>
+  <rect fill="#f1d083" height="2.7" id="connector6pin" y="61.650002" width="2.7" x="54.900002"/>
+  <rect fill="#f1d083" height="2.7" id="connector7pin" y="61.650002" width="2.7" x="72.621921"/>
+  <g display="inline" id="g14332">
+   <rect fill="url(#linearGradient14290)" fill-rule="evenodd" height="14.4" id="rect14178" y="24.299999" width="14.4" x="31.049999"/>
+   <g id="g14326">
+    <rect fill="url(#linearGradient14324)" fill-rule="evenodd" height="1.349999" id="rect14180" y="31.950066" width="0.900001" x="30.15"/>
+    <rect fill="url(#linearGradient14321)" fill-rule="evenodd" height="1.349935" id="rect14182" y="34.200066" width="0.900001" x="30.15"/>
+    <rect fill="url(#linearGradient14318)" fill-rule="evenodd" height="1.35" id="rect14184" y="29.700066" width="0.900001" x="30.15"/>
+    <rect fill="url(#linearGradient14315)" fill-rule="evenodd" height="1.34993" id="rect14186" y="27.450066" width="0.900001" x="30.15"/>
+   </g>
+   <g id="svg_16" transform="matrix(-0.66666647,0,0,-1,66.149995,81.000066) ">
+    <g id="g14222">
+     <rect fill="url(#linearGradient14232)" fill-rule="evenodd" height="1.349999" id="rect14224" y="49.950066" width="1.35" x="29.700001"/>
+     <rect fill="url(#linearGradient14234)" fill-rule="evenodd" height="1.349935" id="rect14226" y="52.200066" width="1.35" x="29.700001"/>
+     <rect fill="url(#linearGradient14236)" fill-rule="evenodd" height="1.35" id="rect14228" y="47.700066" width="1.35" x="29.700001"/>
+     <rect fill="url(#linearGradient14238)" fill-rule="evenodd" height="1.34993" id="rect14230" y="45.450066" width="1.35" x="29.700001"/>
+    </g>
+   </g>
+   <g id="svg_17" transform="matrix(0,0.66666669,-1,0,78.750066,12.599999) ">
+    <g id="g14240">
+     <rect fill="url(#linearGradient14250)" fill-rule="evenodd" height="1.349999" id="rect14242" y="40.950066" width="1.35" x="16.200001"/>
+     <rect fill="url(#linearGradient14252)" fill-rule="evenodd" height="1.349935" id="rect14244" y="43.200066" width="1.35" x="16.200001"/>
+     <rect fill="url(#linearGradient14254)" fill-rule="evenodd" height="1.35" id="rect14246" y="38.700066" width="1.35" x="16.200001"/>
+     <rect fill="url(#linearGradient14256)" fill-rule="evenodd" height="1.34993" id="rect14248" y="36.450066" width="1.35" x="16.200001"/>
+    </g>
+   </g>
+   <g id="svg_18" transform="matrix(0,-0.66666647,1,0,-2.2500655,68.399995) ">
+    <g id="g14258">
+     <rect fill="url(#linearGradient14268)" fill-rule="evenodd" height="1.349999" id="rect14260" y="40.950066" width="1.35" x="43.200005"/>
+     <rect fill="url(#linearGradient14270)" fill-rule="evenodd" height="1.349935" id="rect14262" y="43.200066" width="1.35" x="43.200005"/>
+     <rect fill="url(#linearGradient14272)" fill-rule="evenodd" height="1.35" id="rect14264" y="38.700066" width="1.35" x="43.200005"/>
+     <rect fill="url(#linearGradient14274)" fill-rule="evenodd" height="1.34993" id="rect14266" y="36.450066" width="1.35" x="43.200005"/>
+    </g>
+   </g>
+  </g>
+  <rect fill="#ffffff" fill-opacity="0.156863" fill-rule="evenodd" height="5.4" id="rect14355" y="41.849998" width="11.25" x="24.75"/>
+  <rect fill="#ffffff" fill-opacity="0.156863" fill-rule="evenodd" height="5.4" id="rect14357" y="41.849998" width="11.25" x="40.5"/>
+  <rect fill="#ffffff" fill-opacity="0.156863" fill-rule="evenodd" height="5.4" id="rect14359" y="41.849998" width="11.25" x="56.25"/>
+  <rect fill="#ffffff" fill-opacity="0.156863" fill-rule="evenodd" height="5.4" id="rect14361" y="33.75" width="11.25" x="56.25"/>
+  <rect fill="#ffffff" fill-opacity="0.156863" fill-rule="evenodd" height="5.4" id="rect14363" y="39.599998" width="11.25" x="9"/>
+  <rect fill="#ffffff" fill-opacity="0.156863" fill-rule="evenodd" height="9.45" id="rect14365" y="24.299999" width="5.4" x="12.6"/>
+  <g id="svg_19" transform="matrix(0,-1,1,0,0,0) ">
+   <g font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="text14393">
+    <text font-size="4px" text-anchor="start" id="tspan14395" y="12.6" x="-59.400002">Vin</text>
+   </g>
+  </g>
+  <g id="svg_20" transform="matrix(0,-1,1,0,0,0) ">
+   <g font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="text14397">
+    <text font-size="4px" text-anchor="start" id="tspan14399" y="21.599998" x="-59.400002">3Vo</text>
+   </g>
+  </g>
+  <g id="svg_21" transform="matrix(0,-1,1,0,0,0) ">
+   <g font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="text14401">
+    <text font-size="4px" text-anchor="start" id="tspan14403" y="30.621824" x="-59.400002">GND</text>
+   </g>
+  </g>
+  <g id="svg_22" transform="matrix(0,-1,1,0,0,0) ">
+   <g font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="text14405">
+    <text font-size="4px" text-anchor="start" id="tspan14407" y="39.621826" x="-59.400002">SCL</text>
+   </g>
+  </g>
+  <g id="svg_23" transform="matrix(0,-1,1,0,0,0) ">
+   <g font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="text14409">
+    <text font-size="4px" text-anchor="start" id="tspan14411" y="48.621826" x="-59.400002">SDA</text>
+   </g>
+  </g>
+  <g id="svg_24" transform="matrix(0,-1,1,0,0,0) ">
+   <g font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="text14413">
+    <text font-size="4px" text-anchor="start" id="tspan14415" y="57.621826" x="-59.400002">SDO</text>
+   </g>
+  </g>
+  <g transform="matrix(0,-1,1,0,0,0) " id="svg_25">
+   <g font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="text14417">
+    <text font-size="4px" text-anchor="start" id="tspan14419" y="75.343745" x="-59.400002">INT</text>
+   </g>
+  </g>
+  <g id="svg_26">
+   <path fill="none" stroke="#ffffff" stroke-width="0.72" stroke-miterlimit="4" id="path14421" d="m51.75,20.25a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <g id="svg_27">
+   <path fill="none" stroke="#ffffff" stroke-width="0.72" stroke-miterlimit="4" id="path14423" d="m50.4,20.25a0.9,0.9 0 1 1 -1.8,0a0.9,0.9 0 1 1 1.8,0z"/>
+  </g>
+  <path fill="none" stroke="#ffffff" stroke-width="0.72" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="4" stroke-dashoffset="0" id="path14435" d="m49.5,24.75l0,13.5l1.35,-2.25"/>
+  <path fill="none" stroke="#ffffff" stroke-width="0.72" stroke-linecap="round" stroke-miterlimit="4" stroke-dashoffset="0" id="path14437" d="m48.15,36l1.35,2.25"/>
+  <path fill="none" stroke="#ffffff" stroke-width="0.72" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="4" stroke-dashoffset="0" id="path14439" d="m45,20.25l-13.5,0l2.25,1.35"/>
+  <path fill="none" stroke="#ffffff" stroke-width="0.72" stroke-linecap="round" stroke-miterlimit="4" stroke-dashoffset="0" id="path14441" d="m31.5,20.25l2.25,-1.35"/>
+  <g font-size="8px" font-style="normal" font-weight="normal" text-anchor="end" fill="#000000" font-family="OCRA" id="text14465">
+   <text font-size="6px" fill="#ffffff" id="tspan14467" y="22.5" x="31.049999">X</text>
+  </g>
+  <g font-size="8px" font-style="normal" font-weight="normal" text-anchor="end" fill="#000000" font-family="OCRA" id="text14469">
+   <text font-size="6px" fill="#ffffff" id="tspan14471" y="33.299999" x="54.900002">Y</text>
+  </g>
+  <g font-size="8px" font-style="normal" font-weight="normal" text-anchor="end" fill="#000000" font-family="OCRA" id="text14479">
+   <text font-size="6px" fill="#ffffff" id="tspan14481" y="22.5" x="56.25">Z</text>
+  </g>
+  <g font-size="8px" font-style="normal" font-weight="normal" text-anchor="middle" fill="#000000" font-family="OCRA" id="text14483">
+   <text font-size="6px" font-weight="normal" fill="#ffffff" id="tspan14485" y="13.5" x="38.700001">LIS3DH</text>
+  </g>
+  <g font-size="8px" font-style="normal" font-weight="normal" text-anchor="end" fill="#000000" font-family="OCRA" id="text14487">
+   <text font-size="5px" fill="#ffffff" id="tspan14489" y="39.599998" x="29.700001">v2</text>
+  </g>
+  <g id="svg_35">
+   <path fill="none" stroke="#b9b9b9" stroke-width="2.25" stroke-linecap="round" stroke-miterlimit="4" id="svg_34" d="m67.5,63a2.25,2.25 0 1 1 -4.5,0a2.25,2.25 0 1 1 4.5,0z"/>
+  </g>
+  <rect fill="#f1d083" height="2.7" id="connector8pin" y="61.650002" width="2.7" x="63.900002"/>
+  <g transform="matrix(0,-1,1,0,0,0) " font-size="4px" font-style="normal" font-weight="normal" text-anchor="start" fill="#ffffff" font-family="OCRA" id="svg_38">
+   <text font-size="4px" text-anchor="start" id="svg_37" y="66.621826" x="-59.400002">CS</text>
+  </g>
+ </g>
+</svg>
