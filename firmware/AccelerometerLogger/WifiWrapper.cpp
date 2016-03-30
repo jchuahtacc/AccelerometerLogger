@@ -3,8 +3,13 @@
 #include "StatusLED.h"
 #include <Esp.h>
 
-WifiWrapper::WifiWrapper(int ledPin) {
+WifiWrapper::WifiWrapper(int ledPin, const char* stationId) {
+  station_id = stationId;
   led = StatusLED(ledPin);
+  controlPort = -1;
+  dataPort = -1;
+  blankIp = IPAddress(0, 0, 0 ,0);
+  serverIp = blankIp;
 }
 
 bool WifiWrapper::wifiConnect(const char* ssid, const char* password) {
@@ -29,24 +34,72 @@ bool WifiWrapper::wifiConnect(const char* ssid, const char* password) {
     return false;
   }
   Serial.println("WiFi Connected!");
+
+  // Start UDP listener  
   return true;
+}
+
+bool WifiWrapper::receivedValidServerInfo(void) {
+  return controlPort > 0 && dataPort > 0 && !(serverIp == blankIp);
+}
+
+bool WifiWrapper::receiveServerInfo(void) {
+  broadcastListener.begin(9997);
+  char packetBuffer[512] = { 0 };
+  bool received = false;
+  int numBytes = 0;
+  while (!received) {
+    numBytes = broadcastListener.parsePacket();
+    if (numBytes) {
+      broadcastListener.read(packetBuffer, numBytes);
+      if (strstr(packetBuffer, station_id)) {
+        char* p = strchr(packetBuffer, ',') + 1;
+        int receivedControlPort = atoi(p);
+        p = strchr(p, ',') + 1;
+        int receivedDataPort = atoi(p);
+        if (receivedDataPort > 0 && receivedControlPort > 0) {
+          serverIp = broadcastListener.remoteIP();
+          controlPort = receivedControlPort;
+          dataPort = receivedDataPort;
+          Serial.print("IP: ");
+          Serial.println(serverIp);
+          Serial.print("Control Port: ");
+          Serial.println(controlPort);
+          Serial.print("Data Port: ");
+          Serial.println(dataPort);
+          received = true;
+          return true;
+        }
+      }
+    }
+    led.on();
+    delay(500);
+    yield();
+    led.off();
+    delay(500);
+    yield();
+  }
 }
 
 bool WifiWrapper::wifiConnected() {
   return WiFi.status() == WL_CONNECTED;
 }
 
-bool WifiWrapper::serverConnect(IPAddress ip, int cport, int dport) {
-  serverIp = ip;
-  controlPort = cport;
-  dataPort = dport;
+bool WifiWrapper::serverConnect() {
   Serial.println("Attempting to connect to server");
-  if (!client.connect(ip, controlPort)) return false;
+  if (!client.connect(serverIp, controlPort)) return false;
 //  memset(response_buffer, 0, 200);
 //  Serial.println("Sending hello");
 //  client.println("Hello!");
   Serial.println("Server connected!");
-  return true;
+  return true;  
+}
+
+bool WifiWrapper::serverConnect(IPAddress ip, int cport, int dport) {
+  serverIp = ip;
+  controlPort = cport;
+  dataPort = dport;
+  return serverConnect();
 }
 
 bool WifiWrapper::serverConnected() {
