@@ -12,7 +12,7 @@ Included in this repository are:
 
 - [Materials list](./MATERIALS.md)
 - [Instructions for assembling accelerometers](./ASSEMBLY.md)
-- [Firmware source code for the accelerometer](./firmware/README.md)
+- [Firmware source code for the accelerometer](./firmware/)
 - Server source code for capturing data
 - Sample data and lesson examples
 
