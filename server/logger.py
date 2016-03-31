@@ -201,7 +201,7 @@ def halt_data_collection():
 def write_data():
     filename = raw_input("Enter a filename for the data: ")
     if filename.find('.csv') <= -1:
-        filename = filename.trim() + '.csv'
+        filename = filename.strip() + '.csv'
     f = open(filename, 'w')
     for key in clients:
         client = clients[key]
