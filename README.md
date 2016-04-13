@@ -1,6 +1,6 @@
 # Accelerometer Logger
 
-This project is an WiFi enabled accelerometer, built for engineering and physics students to wirelessly capture acceleration data. 
+This project is an WiFi enabled accelerometer, built for engineering and physics students to wirelessly capture acceleration data.
 
 ![Sample Graph](./images/samplegraph.png)
 
@@ -13,7 +13,7 @@ Included in this repository are:
 - [Materials list](./MATERIALS.md)
 - [Instructions for assembling accelerometers](./ASSEMBLY.md)
 - [Firmware source code for the accelerometer](./firmware/)
-- Server source code for capturing data
+- [Server source code for capturing data](./server/)
 - Sample data and lesson examples
 
 You may download the entire repository [using this link](https://github.com/jchuahtacc/AccelerometerLogger/archive/master.zip).

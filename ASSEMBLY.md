@@ -45,3 +45,5 @@ The next component is relatively straightforward to assemble. You must solder th
 ### You're finished!
 
 ![Finished](./images/build_finished.jpg)
+
+Some additional notes - If you are attaching a LiPo battery, keep in mind that the battery itself is a little fragile and prone to heating up quickly under usage. Make sure that there is material separating the pin headers on the Accelerometer from the battery itself, to avoid puncturing the battery during use or abuse. A small project box is highly recommended for safety.
