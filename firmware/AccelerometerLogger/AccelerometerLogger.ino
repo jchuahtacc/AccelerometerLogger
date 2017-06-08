@@ -30,6 +30,7 @@ void configError(void);
 void configureAccelerometer(void);
 void startStreaming(void);
 void haltStreaming(void);
+void flashPing(void);
 
 int eventCount = 0;
 int flushCount = 0;
@@ -77,6 +78,7 @@ void loop() {
         case COMMAND_CONFIGURE : configureAccelerometer(); break;
         case COMMAND_START : startStreaming(); break;
         case COMMAND_HALT : haltStreaming(); break;
+        case COMMAND_PING : flashPing(); break;
       }
       led.on();
       if (accel.dataReady()) {
@@ -104,6 +106,15 @@ void loop() {
       yield();
     }
   }
+}
+
+void flashPing() {
+  Serial.println("Received ping");
+  led.flash(2);
+  delay(500);
+  led.flash(2);
+  delay(500);
+  led.flash(2);
 }
 
 void startStreaming() {

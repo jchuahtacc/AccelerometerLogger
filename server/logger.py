@@ -33,6 +33,7 @@ OPCODE_CONFIGURE = 'r'
 OPCODE_START = 's'
 OPCODE_HALT = 'h'
 OPCODE_KEEPALIVE = 'k'
+OPCODE_PING = 'p'
 
 quit = False
 samplerate = "g"
@@ -116,6 +117,14 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
             self.client.state = STATE_DISCONNECTED
             self.request.close()
 
+def ping(ip):
+    for key in clients:
+        try:
+            client = clients[key]
+            if client.ip is ip:
+                client.socket.sendall(OPCODE_PING)
+        except:
+            print "Error pinging " + str(client.ip)
 
 def broadcast(command, newstate=None):
     for key in clients:
@@ -135,6 +144,7 @@ def print_menu():
     print "(s) start data collection"
     print "(h) halt data collection"
     print "(w) write data to disk"
+    print "(l) light up a sensor"
     print "(q) quit"
 
 
@@ -220,6 +230,17 @@ def write_data():
     print "Data written to " + filename
     pass
 
+def print_clients():
+    import string
+    keys = list(clients.keys())
+    print "Choose a sensor to signal"
+    for i in range(len(keys)):
+        print "(" + string.ascii_lowercase[i] + ") " + str(clients[keys[i]].ip)
+    choice = raw_input('Enter a choice letter:').lower()
+    if choice in string.ascii_lowercase:
+        ip = clients[keys[string.ascii_lowercase.index(choice)]].ip
+        print "Signalling ", ip
+        ping(ip)
 
 def runServer(host, controlPort, dataPort):
     print "Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(
@@ -248,6 +269,8 @@ def runServer(host, controlPort, dataPort):
                     halt_data_collection()
                 elif choice == 'w':
                     write_data()
+                elif choice == 'l':
+                    print_clients()
                 elif choice == 'q':
                     quit = True
             print "Calling server shutdown"
@@ -265,8 +288,8 @@ def runServer(host, controlPort, dataPort):
             controlThread.join()
             dataThread.join()
             print "Goodbye!"
-    except:
-        print "Couldn't start server on the specified IP address and port"
+    except Exception as e:
+        print "Couldn't start server on the specified IP address and port", e
 
 
 if __name__ == "__main__":

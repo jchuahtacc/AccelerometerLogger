@@ -173,6 +173,7 @@ int WifiWrapper::getCommand(void) {
       requestedRange = client.read();
       return COMMAND_CONFIGURE;
       break;
+    case OPCODE_PING : return COMMAND_PING; break;
     default: return COMMAND_UNKNOWN; break;
   }
   return COMMAND_UNKNOWN;

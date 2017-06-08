@@ -12,11 +12,13 @@
 #define COMMAND_START                 2
 #define COMMAND_HALT                  3
 #define COMMAND_KEEPALIVE             4
+#define COMMAND_PING                  5
 
 #define OPCODE_CONFIGURE              'r'
 #define OPCODE_START                  's'
 #define OPCODE_HALT                   'h'
 #define OPCODE_KEEPALIVE              'k'     // unused on server side, for now
+#define OPCODE_PING                   'p'
 
 #define CONFIG_1HZ                    'a'
 #define CONFIG_10HZ                   'b'
