@@ -51,6 +51,7 @@ class AccelerometerClient(object):
         self.events = list()
         self.socket = socket
         self.ip = socket.getpeername()[0]
+        self.clientId = ""
 
     def addEvent(self, timestamp, x, y, z):
         event = {"timestamp": timestamp, "x": x, "y": y, "z": z}
@@ -73,11 +74,21 @@ class DataStreamHandler(SocketServer.BaseRequestHandler):
 
 
 class AccelerometerHandler(SocketServer.BaseRequestHandler):
+    def readClientId(self):
+        clientIdReceived = False
+        clientId = ""
+        while not clientIdReceived:
+            char = self.request.recv(1)
+            clientId = clientId + char
+            clientIdReceived = char == "\n" or char == "\r"
+        return clientId.strip()
+
     def setup(self):
         if not (self.request.getpeername()[0] in clients):
             self.client = AccelerometerClient(self.request)
             clients[self.client.ip] = self.client
-            print "New client: " + str(self.client.ip)
+            self.client.clientId = self.readClientId()
+            print "New client: ", self.client.clientId
             try:
                 self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
             except Exception:
@@ -86,13 +97,15 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
             self.client = clients[self.request.getpeername()[0]]
             self.client.state = STATE_CONNECTED
             self.client.socket = self.request
-            print "Client reconnected: " + str(self.client.ip)
+            self.client.clientId = self.readClientId()
+            print "Client reconnected: " + str(self.client.clientId)
             try:
                 self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
             except Exception:
                 print "Error reconfiguring client upon reconnect"
 
     def handle(self):
+        print "Got a connection!"
         disconnected = False
         numTimeouts = 0
         self.request.settimeout(2)
@@ -213,17 +226,19 @@ def write_data():
     if filename.find('.csv') <= -1:
         filename = filename.strip() + '.csv'
     f = open(filename, 'w')
+    f.write("clientId,ms,x,y,z")
+    f.write("\n")
     for key in clients:
         client = clients[key]
         for event in client.events:
-            event[0] = str(client.ip)
+            event[0] = str(client.clientId)
             event[2] = float(event[2]) / dividers[samplerange]
             event[3] = float(event[3]) / dividers[samplerange]
             event[4] = float(event[4]) / dividers[samplerange]
-            for item in event:
-                f.write(str(item))
-                f.write(',')
-            f.write('\n')
+            outs = [ str(val) for val in event ]
+            output = ",".join(outs)
+            f.write(output)
+            f.write("\n")
         client.events = list()
     f.flush()
     f.close()
@@ -242,14 +257,26 @@ def print_clients():
         print "Signalling ", ip
         ping(ip)
 
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    pass
+
+class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
+    pass
+
 def runServer(host, controlPort, dataPort):
     print "Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(
         dataPort)
     try:
-        controlServer = SocketServer.TCPServer((host, controlPort), AccelerometerHandler)
+
+        #import socket
+        #import thread
+        #controlSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #controlSocket.bind(('', controlPort))
+
+        controlServer = ThreadedTCPServer((host, controlPort), AccelerometerHandler)
         controlThread = Thread(target=controlServer.serve_forever)
         controlThread.start()
-        dataServer = SocketServer.UDPServer((host, dataPort), DataStreamHandler)
+        dataServer = ThreadedUDPServer((host, dataPort), DataStreamHandler)
         dataThread = Thread(target=dataServer.serve_forever)
         dataThread.start()
         quit = False

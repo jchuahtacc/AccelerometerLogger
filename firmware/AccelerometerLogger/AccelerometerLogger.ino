@@ -17,12 +17,13 @@
 const char* ssid = "codetacc";              // your WiFi access point
 const char* password = "codetacc";          // your WiFi password
 const char* stationId = "codetacc";         // your accelerometer station ID
+const char* clientId = "bravo";              // this Accelerometer's client ID
 
 #define STATUS_LED 0
 
 Adafruit_LIS3DH accel = Adafruit_LIS3DH();
 StatusLED led = StatusLED(STATUS_LED);
-WifiWrapper wifi = WifiWrapper(STATUS_LED, stationId);
+WifiWrapper wifi = WifiWrapper(STATUS_LED, stationId, clientId);
 
 // Method prototypes
 void commandError(void);

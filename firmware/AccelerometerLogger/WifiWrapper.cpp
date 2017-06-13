@@ -3,8 +3,9 @@
 #include "StatusLED.h"
 #include <Esp.h>
 
-WifiWrapper::WifiWrapper(int ledPin, const char* stationId) {
+WifiWrapper::WifiWrapper(int ledPin, const char* stationId, const char* clientId) {
   station_id = stationId;
+  client_id = clientId;
   led = StatusLED(ledPin);
   controlPort = -1;
   dataPort = -1;
@@ -92,6 +93,7 @@ bool WifiWrapper::serverConnect() {
 //  Serial.println("Sending hello");
 //  client.println("Hello!");
   Serial.println("Server connected!");
+  sendClientId();
   return true;  
 }
 
@@ -134,6 +136,12 @@ bool WifiWrapper::send(long timestamp, int x, int y, int z) {
     flush();
   }
   return true;
+}
+
+void WifiWrapper::sendClientId() {
+  client.println(client_id);
+  Serial.println("Sent client id:");
+  Serial.println(client_id);
 }
 
 void WifiWrapper::flush(void) {

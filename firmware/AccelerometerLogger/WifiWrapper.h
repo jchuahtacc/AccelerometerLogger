@@ -38,7 +38,7 @@
 
 class WifiWrapper {
 public:
-  WifiWrapper(int, const char*);
+  WifiWrapper(int, const char*, const char*);
   bool wifiConnect(const char*, const char *);
   bool wifiConnected(void);
   bool receiveServerInfo(void);
@@ -47,6 +47,7 @@ public:
   bool serverConnect(IPAddress, int, int);
   bool serverConnected(void);
   bool send(long, int, int, int);
+  void sendClientId();
   void flush(void);
   bool sendKeepalive();
   int getCommand(void);
@@ -66,6 +67,7 @@ private:
   char response_buffer[10];
   char send_buffer[SEND_BUFFER_LENGTH] = { 0 };
   const char* station_id;
+  const char* client_id;
   int bufferPosition = 0;
   int writesSinceFlush = 0;
 };
