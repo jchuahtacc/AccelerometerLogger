@@ -19,6 +19,10 @@ import socket
 import time
 from threading import Thread
 import sys
+from IPython.display import display
+import socket
+import ipywidgets as widgets
+import matplotlib.pyplot as plt
 
 # from multiprocessing import Process
 
@@ -40,6 +44,11 @@ samplerate = "g"
 samplerange = "b"
 streamingData = False
 
+clients = dict()
+sample_count_labels = dict()
+status_labels = dict()
+milliseconds_label = widgets.Label(value="0", layout=widgets.Layout(width="100%"))
+
 dividers = {"a": 16380, "b": 8192, "c": 4096, "d": 2048}
 rates = {"a": "1 Hz", "b": "10 Hz", "c": "25 Hz", "d": "50 Hz", "e": "100 Hz", "f": "200 Hz", "g": "400 Hz"}
 ranges = {"a": "2G", "b": "4G", "c": "8G", "d": "16G"}
@@ -56,9 +65,6 @@ class AccelerometerClient(object):
     def addEvent(self, timestamp, x, y, z):
         event = {"timestamp": timestamp, "x": x, "y": y, "z": z}
         self.events.append(event)
-
-
-clients = dict()
 
 
 def chunk(l, n):
@@ -88,24 +94,24 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
             self.client = AccelerometerClient(self.request)
             clients[self.client.ip] = self.client
             self.client.clientId = self.readClientId()
-            print "New client: ", self.client.clientId
+            print("New client: ", self.client.clientId)
             try:
                 self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
             except Exception:
-                print "Error configuring new client"
+                print("Error configuring new client")
         else:
             self.client = clients[self.request.getpeername()[0]]
             self.client.state = STATE_CONNECTED
             self.client.socket = self.request
             self.client.clientId = self.readClientId()
-            print "Client reconnected: " + str(self.client.clientId)
+            print("Client reconnected: " + str(self.client.clientId))
             try:
                 self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
             except Exception:
-                print "Error reconfiguring client upon reconnect"
+                print("Error reconfiguring client upon reconnect")
 
     def handle(self):
-        print "Got a connection!"
+        print("Got a connection!")
         disconnected = False
         numTimeouts = 0
         self.request.settimeout(2)
@@ -126,18 +132,9 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
 
     def finish(self):
         if self.client.ip in clients:
-            print str(self.client.ip) + " disconnected"
+            print(str(self.client.ip) + " disconnected")
             self.client.state = STATE_DISCONNECTED
             self.request.close()
-
-def ping(ip):
-    for key in clients:
-        try:
-            client = clients[key]
-            if client.ip is ip:
-                client.socket.sendall(OPCODE_PING)
-        except:
-            print "Error pinging " + str(client.ip)
 
 def broadcast(command, newstate=None):
     for key in clients:
@@ -147,45 +144,16 @@ def broadcast(command, newstate=None):
             if not newstate is None:
                 client.state = newstate
         except Exception:
-            print "Error sending command to " + str(client.ip)
-
-
-def print_menu():
-    print "(a) announce server info"
-    print "(c) configure accelerometers"
-    print "(p) print status"
-    print "(s) start data collection"
-    print "(h) halt data collection"
-    print "(w) write data to disk"
-    print "(l) light up a sensor"
-    print "(q) quit"
-
+            print("Error sending command to " + str(client.ip))
 
 def configure():
     global samplerate
     global samplerange
-    print "Choose a sample rate:"
-    print "(a) 1 Hz"
-    print "(b) 10 Hz"
-    print "(c) 25 Hz"
-    print "(d) 50 Hz"
-    print "(e) 100 Hz"
-    print "(f) 200 Hz"
-    print "(g) 400 Hz"
-    samplerate = raw_input("Sample rate selection: ").lower()
-    print "Choose a sample range:"
-    print "(a) 2G"
-    print "(b) 4G"
-    print "(c) 8G"
-    print "(d) 16G"
-    samplerange = raw_input("Sample range selection: ").lower()
-    pass
     cmdstring = OPCODE_CONFIGURE + samplerate + samplerange
     broadcast(cmdstring)
 
 
-def announce():
-    station_id = raw_input("What station ID would you like to broadcast? Capitalization matters! ")
+def announce(station_id):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 0))
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
@@ -193,23 +161,11 @@ def announce():
     s.sendto(data, ('<broadcast>', 9997))
 
 
-def print_status():
-    print "Accelerometer settings - " + ranges[samplerange] + " sampling range at " + rates[samplerate]
-    if streamingData:
-        print "Currently receiving data"
-    else:
-        print "Not currently receiving data"
-    for key in clients:
-        client = clients[key]
-        print str(client.ip) + ": " + client.state + " (" + str(len(client.events)) + " events recorded)"
-    pass
-
-
 def signal_start():
     broadcast(OPCODE_START, STATE_RUNNING)
     global streamingData
     streamingData = True
-    print "Started data collection"
+    print("Started data collection")
     pass
 
 
@@ -217,12 +173,11 @@ def halt_data_collection():
     broadcast(OPCODE_HALT, STATE_CONNECTED)
     global streamingData
     streamingData = False
-    print "Halted data collection"
+    print("Halted data collection")
     pass
 
 
-def write_data():
-    filename = raw_input("Enter a filename for the data: ")
+def write_data(filename):
     if filename.find('.csv') <= -1:
         filename = filename.strip() + '.csv'
     f = open(filename, 'w')
@@ -242,20 +197,8 @@ def write_data():
         client.events = list()
     f.flush()
     f.close()
-    print "Data written to " + filename
+    print("Data written to " + filename)
     pass
-
-def print_clients():
-    import string
-    keys = list(clients.keys())
-    print "Choose a sensor to signal"
-    for i in range(len(keys)):
-        print "(" + string.ascii_lowercase[i] + ") " + str(clients[keys[i]].ip)
-    choice = raw_input('Enter a choice letter:').lower()
-    if choice in string.ascii_lowercase:
-        ip = clients[keys[string.ascii_lowercase.index(choice)]].ip
-        print "Signalling ", ip
-        ping(ip)
 
 class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
     pass
@@ -267,12 +210,6 @@ def runServer(host, controlPort, dataPort):
     print "Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(
         dataPort)
     try:
-
-        #import socket
-        #import thread
-        #controlSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        #controlSocket.bind(('', controlPort))
-
         controlServer = ThreadedTCPServer((host, controlPort), AccelerometerHandler)
         controlThread = Thread(target=controlServer.serve_forever)
         controlThread.start()
@@ -280,79 +217,147 @@ def runServer(host, controlPort, dataPort):
         dataThread = Thread(target=dataServer.serve_forever)
         dataThread.start()
         quit = False
-        try:
-            while not quit:
-                print_menu()
-                choice = raw_input("Enter choice letter: ").lower()
-                if choice == 'a':
-                    announce()
-                elif choice == 'c':
-                    configure()
-                elif choice == 'p':
-                    print_status()
-                elif choice == 's':
-                    signal_start()
-                elif choice == 'h':
-                    halt_data_collection()
-                elif choice == 'w':
-                    write_data()
-                elif choice == 'l':
-                    print_clients()
-                elif choice == 'q':
-                    quit = True
-            print "Calling server shutdown"
-            controlServer.shutdown()
-            dataServer.shutdown()
-            print "Joining thread"
-            controlThread.join()
-            dataThread.join()
-            print "Goodbye!"
-            raise KeyboardInterrupt()
-        except KeyboardInterrupt:
-            quit = True
-            controlServer.shutdown()
-            dataServer.shutdown()
-            controlThread.join()
-            dataThread.join()
-            print "Goodbye!"
+        controlServer.shutdown()
+        dataServer.shutdown()
+        controlThread.join()
+        dataThread.join()
     except Exception as e:
-        print "Couldn't start server on the specified IP address and port", e
+    	print e
 
 
-if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        HOST = sys.argv[1]
-        if len(sys.argv) > 2:
-            CONTROL_PORT = int(sys.argv[2])
-        if len(sys.argv) > 3:
-            DATA_PORT = int(sys.argv[3])
-    else:
-        # lifted from StackOverflow
-        ipmaybe = ([l for l in (
-            [ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [
-                [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in
-                 [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0])
-        if type(ipmaybe) is str:
-            HOST = ipmaybe
-            print "Your IP address is " + str(HOST)
-        else:
-            print "Choose the network interface for this server: "
-            current = 1
-            for entry in ipmaybe:
-                print "(" + str(current) + ") " + entry
-                current = current + 1
-            choice = raw_input("Choose an entry: ")
-            choice = int(choice)
-            HOST = ipmaybe[choice - 1]
-        cport_input = raw_input("Enter a control port, or leave this blank to use the default of 9999: ")
-        if len(cport_input) <= 0:
-            CONTROL_PORT = 9999
-        else:
-            CONTORL_PORT = int(cport_input)
-        dport_input = raw_input("Enter a data port, or leave this blank to use the default of 9998: ")
-        if len(dport_input) <= 0:
-            DATA_PORT = 9998
-        else:
-            DATA_PORT = int(dport_input)
+def build_export_panel():
+    global clients
+    export_text = widgets.Text(
+        value="accelerometer.csv"
+    )
+    export_button = widgets.Button(
+        description="Export"
+    )
+    preview_button = widgets.Button(
+        description="Preview"
+    )
+    def preview_click(b):
+        fig,ax = plt.subplots(1)
+        fig.show()
+        
+    preview_button.on_click(preview_click)
+    left = widgets.VBox([widgets.Label(value="Filename"), widgets.Label()])
+    middle = widgets.VBox([export_text, widgets.Label()])
+    right = widgets.VBox([export_button, preview_button])
+    export_panel = widgets.HBox([left, middle, right])
+    return export_panel
+    
+def build_status_panel():
+    global clients
+    global sample_count_labels
+    start = widgets.Button(
+        description="Start"
+    )
+    stop = widgets.Button(
+        description="Stop"
+    )
+    col1_children = [ start, stop, widgets.Label() ]
+    col2_children = [ widgets.Label() ] * 3
+    col3_children = [ widgets.Label(value="Milliseconds", layout=widgets.Layout(width="100%")), widgets.Label(), widgets.Label(value="Status") ]
+    col4_children = [ milliseconds_label, widgets.Label(), widgets.Label("Samples")]
+    for accel in clients.keys():
+        col2_children.append(widgets.Label(value=accel))
+        status_labels[accel] = widgets.Label(
+            value="CONNECTED",
+            layout=widgets.Layout(width="100%")
+        )
+        col3_children.append(status_labels[accel])
+        sample_count_labels[accel] = widgets.Label(
+            value="0"
+        )
+        col4_children.append(sample_count_labels[accel])
+    status_panel = widgets.HBox([widgets.VBox(col1_children), widgets.VBox(col2_children), \
+                                 widgets.VBox(col3_children), widgets.VBox(col4_children)])
+    return status_panel
 
-    runServer(HOST, CONTROL_PORT, DATA_PORT)
+def build_settings_panel():
+    def get_new_value(change):
+        if change['type'] == 'change' and change['name'] == 'value':
+            return change['new']
+        else:
+            return None
+        
+    def rate_setting_change(change):
+        global rate
+        val = get_new_value(change)
+        if val:
+            rate = val
+            
+    def range_setting_change():
+        global range
+        val = get_new_value(change)
+        if val:
+            range = val
+    
+    rate_setting = widgets.Dropdown(
+        options = list(zip(["1 Hz", "10 Hz", "25 Hz", "50 Hz", "100 Hz", "200 Hz", "400 Hz"], ["a", "b", "c", "d", "e", "f", "g"])),
+        value = samplerate
+    )
+    rate_setting.observe(rate_setting_change)
+    range_setting = widgets.Dropdown(
+        options = list(zip(["2 G", "4 G", "8 G", "16 G"], ["a", "b", "c", "d"])),
+        value = samplerange
+    )
+    labels = [widgets.Label(value=x) for x in ["Rate", "Range"]]
+    settings = [rate_setting, range_setting]
+    label_box = widgets.VBox(labels)
+    settings_box = widgets.VBox(settings)
+    config_options = widgets.HBox([label_box, settings_box])
+    return config_options
+
+def cpanel():
+    main_tabs = widgets.Tab()
+    main_tabs.children = [ build_status_panel(), build_export_panel(), build_settings_panel() ]
+    main_tabs.set_title(0, "Collect Data")
+    main_tabs.set_title(1, "Export Data")
+    main_tabs.set_title(2, "Settings")
+    display(main_tabs)
+
+def configure():
+    ipmaybe = ([l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [
+             [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in
+              [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0])
+    interfaces = widgets.Dropdown(
+        options = [ipmaybe] if type(ipmaybe) is str else ipmaybe,
+        value = ipmaybe if type(ipmaybe) is str else ipmaybe[0],
+    )
+    cport = widgets.Text(
+        value='9999',
+        placeholder='Control Port',
+        disabled=False
+    )
+    dport = widgets.Text(
+        value='9998',
+        placeholder='Data Port',
+        disabled=False
+    )
+    server_id = widgets.Text(
+        value='codetacc',
+        placeholder='Station ID',
+        disabled=False
+    )
+    header = widgets.Label(
+        value='Configure your server',
+        layout=widgets.Layout(width='100%')
+    )
+    go = widgets.Button(
+        description='Start server',
+        layout=widgets.Layout(width="100%")
+    )
+    
+    left_box = widgets.VBox([ widgets.Label(value=x, disabled=True) for x in ["Interface", "Control Port", "Data Port", "Station ID", ""] ])
+    right_box = widgets.VBox([interfaces, cport, dport, server_id, go])
+    settings_box = widgets.HBox([left_box, right_box])
+    settings_panel = widgets.VBox([header, settings_box])
+    def start_clicked(b):
+        settings_panel.close()
+        #runServer(HOST, CONTROL_PORT, DATA_PORT)
+        cpanel()
+    go.on_click(start_clicked)
+    display(settings_panel)
+
