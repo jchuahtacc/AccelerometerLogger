@@ -53,6 +53,10 @@ dividers = {"a": 16380, "b": 8192, "c": 4096, "d": 2048}
 rates = {"a": "1 Hz", "b": "10 Hz", "c": "25 Hz", "d": "50 Hz", "e": "100 Hz", "f": "200 Hz", "g": "400 Hz"}
 ranges = {"a": "2G", "b": "4G", "c": "8G", "d": "16G"}
 
+_main_tabs = None
+_status_panel = None
+_export_panel = None
+_settings_panel = None
 
 class AccelerometerClient(object):
     def __init__(self, socket):
@@ -90,11 +94,16 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         return clientId.strip()
 
     def setup(self):
+        print("Client attempting connection")
+        global _main_tabs
+        global _status_panel
         if not (self.request.getpeername()[0] in clients):
             self.client = AccelerometerClient(self.request)
             clients[self.client.ip] = self.client
             self.client.clientId = self.readClientId()
-            print("New client: ", self.client.clientId)
+            _status_panel = build_status_panel()
+            _main_tabs.children = [ _status_panel, _export_panel, _settings_panel ]
+            print(self.client.clientId + " connected")
             try:
                 self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
             except Exception:
@@ -104,7 +113,9 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
             self.client.state = STATE_CONNECTED
             self.client.socket = self.request
             self.client.clientId = self.readClientId()
-            print("Client reconnected: " + str(self.client.clientId))
+            global status_labels
+            status_labels[self.client.clientId].value = STATE_CONNECTED
+            print(self.client.clientId + " reconnected")
             try:
                 self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
             except Exception:
@@ -133,6 +144,8 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
     def finish(self):
         if self.client.ip in clients:
             print(str(self.client.ip) + " disconnected")
+            global status_labels
+            status_labels[self.client.clientId].value = STATE_DISCONNECTED
             self.client.state = STATE_DISCONNECTED
             self.request.close()
 
@@ -207,22 +220,29 @@ class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     pass
 
 def runServer(host, controlPort, dataPort):
-    print "Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(
-        dataPort)
+    print "Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(dataPort)
     try:
         controlServer = ThreadedTCPServer((host, controlPort), AccelerometerHandler)
-        controlThread = Thread(target=controlServer.serve_forever)
-        controlThread.start()
+        controlServer.serve_forever()
+#        controlThread = Thread(target=controlServer.serve_forever)
+#        controlThread.start()
         dataServer = ThreadedUDPServer((host, dataPort), DataStreamHandler)
-        dataThread = Thread(target=dataServer.serve_forever)
-        dataThread.start()
+        dataServer.serve_forever()
+#        dataThread = Thread(target=dataServer.serve_forever)
+#        dataThread.start()
         quit = False
-        controlServer.shutdown()
-        dataServer.shutdown()
+#        print ("server shutdown")
+#        controlServer.shutdown()
+#        dataServer.shutdown()
+#        print ("server close")
+#        controlServer.server_close()
+#        dataServer.server_close()
+#        print ("thread join")
         controlThread.join()
         dataThread.join()
+#        print("Server shutdown complete")
     except Exception as e:
-    	print e
+        print e
 
 
 def build_export_panel():
@@ -239,14 +259,14 @@ def build_export_panel():
     def preview_click(b):
         fig,ax = plt.subplots(1)
         fig.show()
-        
+
     preview_button.on_click(preview_click)
     left = widgets.VBox([widgets.Label(value="Filename"), widgets.Label()])
     middle = widgets.VBox([export_text, widgets.Label()])
     right = widgets.VBox([export_button, preview_button])
     export_panel = widgets.HBox([left, middle, right])
     return export_panel
-    
+
 def build_status_panel():
     global clients
     global sample_count_labels
@@ -256,21 +276,25 @@ def build_status_panel():
     stop = widgets.Button(
         description="Stop"
     )
+    def stop_click(b):
+        signal_start()
+    def start_click(b):
+        halt_data_collection()
     col1_children = [ start, stop, widgets.Label() ]
     col2_children = [ widgets.Label() ] * 3
     col3_children = [ widgets.Label(value="Milliseconds", layout=widgets.Layout(width="100%")), widgets.Label(), widgets.Label(value="Status") ]
     col4_children = [ milliseconds_label, widgets.Label(), widgets.Label("Samples")]
-    for accel in clients.keys():
-        col2_children.append(widgets.Label(value=accel))
-        status_labels[accel] = widgets.Label(
-            value="CONNECTED",
+    for _, accel in clients.iteritems():
+        col2_children.append(widgets.Label(value=accel.clientId))
+        status_labels[accel.clientId] = widgets.Label(
+            value=accel.state,
             layout=widgets.Layout(width="100%")
         )
-        col3_children.append(status_labels[accel])
-        sample_count_labels[accel] = widgets.Label(
-            value="0"
+        col3_children.append(status_labels[accel.clientId])
+        sample_count_labels[accel.clientId] = widgets.Label(
+            value=str(len(accel.events))
         )
-        col4_children.append(sample_count_labels[accel])
+        col4_children.append(sample_count_labels[accel.clientId])
     status_panel = widgets.HBox([widgets.VBox(col1_children), widgets.VBox(col2_children), \
                                  widgets.VBox(col3_children), widgets.VBox(col4_children)])
     return status_panel
@@ -281,19 +305,19 @@ def build_settings_panel():
             return change['new']
         else:
             return None
-        
+
     def rate_setting_change(change):
         global rate
         val = get_new_value(change)
         if val:
             rate = val
-            
+
     def range_setting_change():
         global range
         val = get_new_value(change)
         if val:
             range = val
-    
+
     rate_setting = widgets.Dropdown(
         options = list(zip(["1 Hz", "10 Hz", "25 Hz", "50 Hz", "100 Hz", "200 Hz", "400 Hz"], ["a", "b", "c", "d", "e", "f", "g"])),
         value = samplerate
@@ -311,12 +335,19 @@ def build_settings_panel():
     return config_options
 
 def cpanel():
-    main_tabs = widgets.Tab()
-    main_tabs.children = [ build_status_panel(), build_export_panel(), build_settings_panel() ]
-    main_tabs.set_title(0, "Collect Data")
-    main_tabs.set_title(1, "Export Data")
-    main_tabs.set_title(2, "Settings")
-    display(main_tabs)
+    global _main_tabs
+    _main_tabs = widgets.Tab()
+    global _status_panel
+    global _export_panel
+    global _settings_panel
+    _status_panel = build_status_panel()
+    _export_panel = build_export_panel()
+    _settings_panel = build_settings_panel()
+    _main_tabs.children = [ _status_panel, _export_panel, _settings_panel ]
+    _main_tabs.set_title(0, "Collect Data")
+    _main_tabs.set_title(1, "Export Data")
+    _main_tabs.set_title(2, "Settings")
+    display(_main_tabs)
 
 def configure():
     ipmaybe = ([l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [
@@ -349,15 +380,17 @@ def configure():
         description='Start server',
         layout=widgets.Layout(width="100%")
     )
-    
+
     left_box = widgets.VBox([ widgets.Label(value=x, disabled=True) for x in ["Interface", "Control Port", "Data Port", "Station ID", ""] ])
     right_box = widgets.VBox([interfaces, cport, dport, server_id, go])
     settings_box = widgets.HBox([left_box, right_box])
     settings_panel = widgets.VBox([header, settings_box])
     def start_clicked(b):
         settings_panel.close()
-        #runServer(HOST, CONTROL_PORT, DATA_PORT)
         cpanel()
+        announce(server_id.value)
+        runServer(interfaces.value, int(cport.value), int(dport.value))
+
     go.on_click(start_clicked)
     display(settings_panel)
 

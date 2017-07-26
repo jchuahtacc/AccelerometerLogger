@@ -1,1 +1,1 @@
-from logger.py import *
+from logger import *
