@@ -207,6 +207,15 @@ def halt_data_collection():
     print("Halted data collection")
     pass
 
+def format_event(clientId, event):
+    output_arr = [None] * 5
+    output_arr[0] = str(clientId)
+    output_arr[1] = event[1]
+    output_arr[2] = float(event[2]) / dividers[samplerange]
+    output_arr[3] = float(event[3]) / dividers[samplerange]
+    output_arr[4] = float(event[4]) / dividers[samplerange]
+    return output_arr
+
 
 def write_data(filename):
     if filename.find('.csv') <= -1:
@@ -217,11 +226,8 @@ def write_data(filename):
     for key in clients:
         client = clients[key]
         for event in client.events:
-            event[0] = str(client.clientId)
-            event[2] = float(event[2]) / dividers[samplerange]
-            event[3] = float(event[3]) / dividers[samplerange]
-            event[4] = float(event[4]) / dividers[samplerange]
-            outs = [ str(val) for val in event ]
+            output_arr = format_event(client.clientId, event)
+            outs = [ str(val) for val in output_arr ]
             output = ",".join(outs)
             f.write(output)
             f.write("\n")
@@ -254,6 +260,37 @@ def runServer(host, controlPort, dataPort):
     except Exception as e:
         print e
 
+def plot():
+    print "Plotting preview..."
+    global clients
+    f, subplots = plt.subplots(len(clients), 3, sharex='col', sharey='row')
+    for i in range(len(clients.keys())):
+        client = clients[clients.keys()[i]]
+        client_name = client.clientId
+        if len(clients) == 1:
+            x = subplots[0]
+            y = subplots[1]
+            z = subplots[2]
+        else:
+            x = subplots[i][0]
+            y = subplots[i][1]
+            z = subplots[i][2]
+        x.set_title(client_name + " x")
+        y.set_title(client_name + " y")
+        z.set_title(client_name + " z")
+        ms = list()
+        x_vals = list()
+        y_vals = list()
+        z_vals = list()
+        for event in client.events:
+            scaled = format_event(client.clientId, event)
+            ms.append(scaled[1])
+            x_vals.append(scaled[2])
+            y_vals.append(scaled[3])
+            z_vals.append(scaled[4])
+        x.scatter(ms, x_vals)
+        y.scatter(ms, y_vals)
+        z.scatter(ms, z_vals)
 
 def build_export_panel():
     global clients
@@ -270,8 +307,7 @@ def build_export_panel():
         write_data(export_text.value)
 
     def preview_click(b):
-        fig,ax = plt.subplots(1)
-        fig.show()
+        plot()
 
     export_button.on_click(export_click)
     preview_button.on_click(preview_click)
