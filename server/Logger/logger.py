@@ -17,7 +17,7 @@
 import SocketServer
 import socket
 import time
-from threading import Thread
+from threading import Thread, Lock
 import sys
 from IPython.display import display
 import socket
@@ -45,6 +45,10 @@ samplerange = "b"
 streamingData = False
 
 clients = dict()
+
+client_lock = Lock()
+ms = 0
+
 sample_count_labels = dict()
 status_labels = dict()
 milliseconds_label = widgets.Label(value="0", layout=widgets.Layout(width="100%"))
@@ -66,21 +70,30 @@ class AccelerometerClient(object):
         self.ip = socket.getpeername()[0]
         self.clientId = ""
 
-    def addEvent(self, timestamp, x, y, z):
-        event = {"timestamp": timestamp, "x": x, "y": y, "z": z}
-        self.events.append(event)
-
-
 def chunk(l, n):
     for i in xrange(0, len(l), n):
         yield l[i:i + n]
 
+def update_status():
+    global miliseconds_label
+    global sample_count_labels
+    global ms
+    milliseconds_label.value = str(ms)
+    for _, client in clients.iteritems():
+        sample_count_labels[client.clientId].value = str(len(client.events))
 
 class DataStreamHandler(SocketServer.BaseRequestHandler):
     def handle(self):
+        global ms
         data = self.request[0].strip()
-        client = clients[self.client_address[0]]
-        client.events.extend(chunk(data.split(' '), 5))
+        if len(data):
+            client = clients[self.client_address[0]]
+            client.events.extend(chunk(data.split(' '), 5))
+            last_event = client.events[-1]
+            last_time = int(last_event[1])
+            if last_time > ms + 200:
+                ms = last_time
+                update_status()
 
 
 class AccelerometerHandler(SocketServer.BaseRequestHandler):
@@ -98,6 +111,7 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         global _main_tabs
         global _status_panel
         if not (self.request.getpeername()[0] in clients):
+            client_lock.acquire()
             self.client = AccelerometerClient(self.request)
             clients[self.client.ip] = self.client
             self.client.clientId = self.readClientId()
@@ -108,6 +122,8 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
                 self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
             except Exception:
                 print("Error configuring new client")
+            finally:
+                client_lock.release()
         else:
             self.client = clients[self.request.getpeername()[0]]
             self.client.state = STATE_CONNECTED
@@ -122,7 +138,6 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
                 print("Error reconfiguring client upon reconnect")
 
     def handle(self):
-        print("Got a connection!")
         disconnected = False
         numTimeouts = 0
         self.request.settimeout(2)
@@ -159,10 +174,11 @@ def broadcast(command, newstate=None):
         except Exception:
             print("Error sending command to " + str(client.ip))
 
-def configure():
+def broadcast_configure():
     global samplerate
     global samplerange
     cmdstring = OPCODE_CONFIGURE + samplerate + samplerange
+    print("Configuring accelerometers with rate " + rates[samplerate] + " and range " + ranges[samplerange])
     broadcast(cmdstring)
 
 
@@ -176,7 +192,9 @@ def announce(station_id):
 
 def signal_start():
     broadcast(OPCODE_START, STATE_RUNNING)
+    global ms
     global streamingData
+    ms = 0
     streamingData = True
     print("Started data collection")
     pass
@@ -220,27 +238,19 @@ class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     pass
 
 def runServer(host, controlPort, dataPort):
-    print "Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(dataPort)
+    print("Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(dataPort))
     try:
         controlServer = ThreadedTCPServer((host, controlPort), AccelerometerHandler)
-        controlServer.serve_forever()
-#        controlThread = Thread(target=controlServer.serve_forever)
-#        controlThread.start()
+#        controlServer.serve_forever()
+        controlThread = Thread(target=controlServer.serve_forever)
+        controlThread.start()
         dataServer = ThreadedUDPServer((host, dataPort), DataStreamHandler)
-        dataServer.serve_forever()
-#        dataThread = Thread(target=dataServer.serve_forever)
-#        dataThread.start()
-        quit = False
-#        print ("server shutdown")
-#        controlServer.shutdown()
-#        dataServer.shutdown()
-#        print ("server close")
-#        controlServer.server_close()
-#        dataServer.server_close()
-#        print ("thread join")
-        controlThread.join()
-        dataThread.join()
-#        print("Server shutdown complete")
+#        dataServer.serve_forever()
+        dataThread = Thread(target=dataServer.serve_forever)
+        dataThread.start()
+        print("Server is listening")
+        #controlThread.join()
+        #dataThread.join()
     except Exception as e:
         print e
 
@@ -256,10 +266,14 @@ def build_export_panel():
     preview_button = widgets.Button(
         description="Preview"
     )
+    def export_click(b):
+        write_data(export_text.value)
+
     def preview_click(b):
         fig,ax = plt.subplots(1)
         fig.show()
 
+    export_button.on_click(export_click)
     preview_button.on_click(preview_click)
     left = widgets.VBox([widgets.Label(value="Filename"), widgets.Label()])
     middle = widgets.VBox([export_text, widgets.Label()])
@@ -277,9 +291,11 @@ def build_status_panel():
         description="Stop"
     )
     def stop_click(b):
-        signal_start()
-    def start_click(b):
         halt_data_collection()
+    def start_click(b):
+        signal_start()
+    start.on_click(start_click)
+    stop.on_click(stop_click)
     col1_children = [ start, stop, widgets.Label() ]
     col2_children = [ widgets.Label() ] * 3
     col3_children = [ widgets.Label(value="Milliseconds", layout=widgets.Layout(width="100%")), widgets.Label(), widgets.Label(value="Status") ]
@@ -307,16 +323,18 @@ def build_settings_panel():
             return None
 
     def rate_setting_change(change):
-        global rate
+        global samplerate
         val = get_new_value(change)
         if val:
-            rate = val
+            samplerate = val
+            broadcast_configure()
 
     def range_setting_change():
-        global range
+        global samplerange
         val = get_new_value(change)
         if val:
-            range = val
+            samplerange = val
+            broadcast_configure()
 
     rate_setting = widgets.Dropdown(
         options = list(zip(["1 Hz", "10 Hz", "25 Hz", "50 Hz", "100 Hz", "200 Hz", "400 Hz"], ["a", "b", "c", "d", "e", "f", "g"])),
