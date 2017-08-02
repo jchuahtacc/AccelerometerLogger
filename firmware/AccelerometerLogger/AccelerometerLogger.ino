@@ -17,7 +17,7 @@
 const char* ssid = "codetacc";              // your WiFi access point
 const char* password = "codetacc";          // your WiFi password
 const char* stationId = "codetacc";         // your accelerometer station ID
-const char* clientId = "bravo";              // this Accelerometer's client ID
+const char* clientId = "alpha";              // this Accelerometer's client ID
 
 #define STATUS_LED 0
 
@@ -67,8 +67,8 @@ void loop() {
       Serial.println("Received server info");
     } else if (!wifi.serverConnected()) {
       Serial.println("Server disconnected...");
-      led.pulse(4);
-      delay(800);
+      led.pulse(1);
+      delay(100);
       yield();
       wifi.serverConnect();
     } else {
@@ -94,7 +94,7 @@ void loop() {
         }
       }
       if (millis() - lastKeepalive > 800) {
-        // Serial.println("Sending keepalive");
+        //Serial.println("Sending keepalive");
         lastKeepalive = millis();
         if (!sending) {
           if (!wifi.sendKeepalive()) {

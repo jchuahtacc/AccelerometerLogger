@@ -26,7 +26,11 @@ import matplotlib.pyplot as plt
 
 # from multiprocessing import Process
 
-HOST, CONTROL_PORT, DATA_PORT = "192.168.0.100", 9999, 9998
+HOST = None
+CONTROL_PORT = 9999
+DATA_PORT = 9998
+STATION_ID = "codetacc"
+PREFER_SUBNET = "192.168"
 
 STATE_DISCONNECTED = "DISCONNECTED";
 STATE_CONNECTED = "CONNECTED";
@@ -48,6 +52,7 @@ clients = dict()
 
 client_lock = Lock()
 ms = 0
+announce_thread = None
 
 sample_count_labels = dict()
 status_labels = dict()
@@ -62,6 +67,24 @@ _status_panel = None
 _export_panel = None
 _settings_panel = None
 
+class AnnounceThread(Thread):
+    def __init__(self):
+        self.stopped = False
+        Thread.__init__(self)
+
+    def run(self):
+        global HOST
+        global STATION_ID
+        global CONTROL_PORT
+        global DATA_PORT
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        data = STATION_ID + "," + str(CONTROL_PORT) + "," + str(DATA_PORT) + "\n"
+        while not self.stopped:
+            s.sendto(data, ('<broadcast>', 9997))
+            time.sleep(5)
+
 class AccelerometerClient(object):
     def __init__(self, socket):
         self.state = STATE_CONNECTED
@@ -70,25 +93,17 @@ class AccelerometerClient(object):
         self.ip = socket.getpeername()[0]
         self.clientId = ""
 
-def chunk(l, n):
-    for i in xrange(0, len(l), n):
-        yield l[i:i + n]
-
-def update_status():
-    global miliseconds_label
-    global sample_count_labels
-    global ms
-    milliseconds_label.value = str(ms)
-    for _, client in clients.iteritems():
-        sample_count_labels[client.clientId].value = str(len(client.events))
-
 class DataStreamHandler(SocketServer.BaseRequestHandler):
+    def chunk(self, l, n):
+        for i in xrange(0, len(l), n):
+            yield l[i:i + n]
+
     def handle(self):
         global ms
         data = self.request[0].strip()
         if len(data):
             client = clients[self.client_address[0]]
-            client.events.extend(chunk(data.split(' '), 5))
+            client.events.extend(self.chunk(data.split(' '), 5))
             last_event = client.events[-1]
             last_time = int(last_event[1])
             if last_time > ms + 200:
@@ -142,6 +157,7 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
         numTimeouts = 0
         self.request.settimeout(2)
         while not quit and not disconnected:
+            time.sleep(1)
             try:
                 self.data = self.request.recv(1024).strip()
                 if self.data == OPCODE_KEEPALIVE:
@@ -153,16 +169,50 @@ class AccelerometerHandler(SocketServer.BaseRequestHandler):
                     if isinstance(e, socket.timeout):
                         numTimeouts = numTimeouts + 1
                         disconnected = numTimeouts > 5
+                        if disconnected:
+                            print self.client.clientId + " timed out"
+                            disconnected = False
                     else:
                         disconnected = True
 
     def finish(self):
         if self.client.ip in clients:
-            print(str(self.client.ip) + " disconnected")
+            print(str(self.client.clientId) + " disconnected")
             global status_labels
             status_labels[self.client.clientId].value = STATE_DISCONNECTED
             self.client.state = STATE_DISCONNECTED
             self.request.close()
+
+class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
+    pass
+
+class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
+    pass
+
+def get_interfaces():
+    global PREFER_SUBNET
+    ipmaybe = ([l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [
+             [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in
+              [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0])
+
+    ipmaybe = [ipmaybe] if type(ipmaybe) is str else ipmaybe
+    if type(ipmaybe) is str:
+        default = ipmaybe
+    else:
+        default = ipmaybe[0]
+        for ip in ipmaybe:
+            if ip.startswith(PREFER_SUBNET):
+                default = ip
+    return ipmaybe, default
+
+
+def update_status():
+    global miliseconds_label
+    global sample_count_labels
+    global ms
+    milliseconds_label.value = str(ms)
+    for _, client in clients.iteritems():
+        sample_count_labels[client.clientId].value = str(len(client.events))
 
 def broadcast(command, newstate=None):
     for key in clients:
@@ -174,6 +224,10 @@ def broadcast(command, newstate=None):
         except Exception:
             print("Error sending command to " + str(client.ip))
 
+def set_subnet(subnet):
+    global PREFER_SUBNET
+    PREFER_SUBNET = subnet
+
 def broadcast_configure():
     global samplerate
     global samplerange
@@ -181,13 +235,6 @@ def broadcast_configure():
     print("Configuring accelerometers with rate " + rates[samplerate] + " and range " + ranges[samplerange])
     broadcast(cmdstring)
 
-
-def announce(station_id):
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(('', 0))
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    data = station_id + "," + str(CONTROL_PORT) + "," + str(DATA_PORT) + "\n"
-    s.sendto(data, ('<broadcast>', 9997))
 
 
 def signal_start():
@@ -237,24 +284,27 @@ def write_data(filename):
     print("Data written to " + filename)
     pass
 
-class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    pass
-
-class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
-    pass
-
-def runServer(host, controlPort, dataPort):
-    print("Starting server on " + str(host) + " with control port " + str(controlPort) + " and data port " + str(dataPort))
+def start():
+    cpanel()
+    global HOST
+    global CONTROL_PORT
+    global DATA_PORT
+    global STATION_ID
+    if HOST is None:
+        _, HOST = get_interfaces()
+    print("Starting station " + STATION_ID + "  on " + str(HOST) + " with control port " + str(CONTROL_PORT) + " and data port " + str(DATA_PORT) + "...")
     try:
-        controlServer = ThreadedTCPServer((host, controlPort), AccelerometerHandler)
-#        controlServer.serve_forever()
+        global announce_thread
+        announce_thread = AnnounceThread()
+        announce_thread.start()
+        controlServer = ThreadedTCPServer((HOST, CONTROL_PORT), AccelerometerHandler)
         controlThread = Thread(target=controlServer.serve_forever)
         controlThread.start()
-        dataServer = ThreadedUDPServer((host, dataPort), DataStreamHandler)
-#        dataServer.serve_forever()
+        dataServer = ThreadedUDPServer((HOST, DATA_PORT), DataStreamHandler)
         dataThread = Thread(target=dataServer.serve_forever)
         dataThread.start()
         print("Server is listening")
+        #announce_thread.join()
         #controlThread.join()
         #dataThread.join()
     except Exception as e:
@@ -403,13 +453,12 @@ def cpanel():
     _main_tabs.set_title(2, "Settings")
     display(_main_tabs)
 
+
 def configure():
-    ipmaybe = ([l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [
-             [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in
-              [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0])
+    interfaces, default = get_interfaces()
     interfaces = widgets.Dropdown(
-        options = [ipmaybe] if type(ipmaybe) is str else ipmaybe,
-        value = ipmaybe if type(ipmaybe) is str else ipmaybe[0],
+        options = interfaces,
+        value = default,
     )
     cport = widgets.Text(
         value='9999',
@@ -421,7 +470,7 @@ def configure():
         placeholder='Data Port',
         disabled=False
     )
-    server_id = widgets.Text(
+    server_id_text = widgets.Text(
         value='codetacc',
         placeholder='Station ID',
         disabled=False
@@ -436,14 +485,22 @@ def configure():
     )
 
     left_box = widgets.VBox([ widgets.Label(value=x, disabled=True) for x in ["Interface", "Control Port", "Data Port", "Station ID", ""] ])
-    right_box = widgets.VBox([interfaces, cport, dport, server_id, go])
+    right_box = widgets.VBox([interfaces, cport, dport, server_id_text, go])
     settings_box = widgets.HBox([left_box, right_box])
     settings_panel = widgets.VBox([header, settings_box])
     def start_clicked(b):
         settings_panel.close()
         cpanel()
-        announce(server_id.value)
-        runServer(interfaces.value, int(cport.value), int(dport.value))
+        global STATION_ID
+        global HOST
+        global CONTROL_PORT
+        global DATA_PORT
+
+        HOST = interfaces.value
+        CONTROL_PORT = int(cport.value)
+        DATA_PORT = int(dport.value)
+        STATION_ID = server_id_text.value
+        start()
 
     go.on_click(start_clicked)
     display(settings_panel)
