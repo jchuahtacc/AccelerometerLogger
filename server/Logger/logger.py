@@ -2,17 +2,7 @@
 
 # logger.py
 #
-# Accelerometer Logger server, for configuring and controlling accelerometers
-# and then saving the data received
-#
-# Sample usage:
-#
-# $ logger.py 192.168.1.100
-#
-# Starts the logger on the IP address 192.168.1.100 (assuming that's your network
-# port's IP address) with the service listening on ports 9999 and 9998
-#
-# Parameters: ip_address, control_port (default is 9999), data_port (default is 9998)
+# Accelerometer server helper code
 
 import SocketServer
 import socket
@@ -24,21 +14,20 @@ import socket
 import ipywidgets as widgets
 import matplotlib.pyplot as plt
 
-# from multiprocessing import Process
-
+# Configuration options
 HOST = None
 PORT = 9999
-#DATA_PORT = 9998
 STATION_ID = "codetacc"
 PREFER_SUBNET = "192.168"
-
 CLIENT_TIMEOUT = 15000
 
+# State options
 STATE_DISCONNECTED = "DISCONNECTED";
 STATE_CONNECTED = "CONNECTED";
 STATE_RUNNING = "RUNNING";
 STATE_STOPPED = "STOPPED";
 
+# Message codes
 OPCODE_CONFIGURE = 'r'
 OPCODE_START = 's'
 OPCODE_HALT = 'h'
@@ -48,31 +37,34 @@ OPCODE_ANNOUNCE = 'a'
 RESPONSECODE_CLIENT = 'c'
 RESPONSECODE_DATA = 'd'
 
-quit = False
-samplerate = "g"
-samplerange = "b"
-streamingData = False
-
+# Dictionary to contain all client data
 clients = dict()
 
+# Dictionary lock
 client_lock = Lock()
+
+# Current data collection runtime
 ms = 0
-announce_thread = None
 
-sample_count_labels = dict()
-status_labels = dict()
-milliseconds_label = widgets.Label(value="0", layout=widgets.Layout(width="100%"))
+# Accelerometer Configuration
+samplerate = "g"
+samplerange = "b"
 
+# Configuration code dictionary with human readable values
 dividers = {"a": 16380, "b": 8192, "c": 4096, "d": 2048}
 rates = {"a": "1 Hz", "b": "10 Hz", "c": "25 Hz", "d": "50 Hz", "e": "100 Hz", "f": "200 Hz", "g": "400 Hz"}
 ranges = {"a": "2G", "b": "4G", "c": "8G", "d": "16G"}
 
+# UI elements that need global access
+sample_count_labels = dict()
+status_labels = dict()
+milliseconds_label = widgets.Label(value="0", layout=widgets.Layout(width="100%"))
 _main_tabs = None
 _status_panel = None
 _export_panel = None
 _settings_panel = None
 
-
+# UDP Helper functions
 def udp_send(ip, data):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
     s.connect((ip, PORT))
@@ -89,6 +81,23 @@ def udp_broadcast(data):
 def send_configuration(ip):
     udp_send(ip, OPCODE_CONFIGURE + samplerate + samplerange)
 
+# Accelerometer command broadcasts
+def broadcast_configure():
+    print("Configuring accelerometers with rate " + rates[samplerate] + " and range " + ranges[samplerange])
+    udp_broadcast(OPCODE_CONFIGURE + samplerate + samplerange)
+
+def signal_start():
+    udp_broadcast(OPCODE_START)
+    global ms
+    ms = 0
+    print("Started data collection")
+
+def halt_data_collection():
+    udp_broadcast(OPCODE_HALT)
+    print("Halted data collection")
+    pass
+
+# Monitor thread that runs broadcasts and checks for timeouts every 5 seconds
 class MonitorThread(Thread):
     def __init__(self):
         self.stopped = False
@@ -109,6 +118,8 @@ class MonitorThread(Thread):
             # Wait 5 seconds
             time.sleep(5)
 
+
+# Accelerometer Client object that stores connection info, state and client data
 class AccelerometerClient(object):
     def __init__(self, ip, clientId):
         self.state = STATE_CONNECTED
@@ -134,12 +145,18 @@ class AccelerometerClient(object):
             ms = last_time
             update_status()
 
+# UDP listener that responds to packets sent by clients
 class AccelUDPHandler(SocketServer.BaseRequestHandler):
     def handle(self):
         global clients
+
+        # Get a packet
         packet = self.request[0].strip()
+
+        # If the packet has data
         if len(packet):
             client_ip = self.client_address[0]
+            # Handle client announcements
             if packet[0] == RESPONSECODE_CLIENT:
                 if client_ip not in clients:
                     if client_ip not in clients:
@@ -152,13 +169,16 @@ class AccelUDPHandler(SocketServer.BaseRequestHandler):
                         send_configuration(client_ip)
                     else:
                         clients[client_ip].update_announce()
+            # Handle data packets
             elif packet[0] == RESPONSECODE_DATA:
                 if client_ip in clients:
                     clients[client_ip].process_data(packet[1:])
 
+# Required mix-in class for threaded UDP server
 class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     pass
 
+# Get a list of local interfaces and a good guess as to which interface to use
 def get_interfaces():
     global PREFER_SUBNET
     ipmaybe = ([l for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127.")][:1], [
@@ -175,7 +195,7 @@ def get_interfaces():
                 default = ip
     return ipmaybe, default
 
-
+# Updates UI status during data collection
 def update_status():
     global miliseconds_label
     global sample_count_labels
@@ -184,29 +204,7 @@ def update_status():
     for _, client in clients.iteritems():
         sample_count_labels[client.clientId].value = str(len(client.events))
 
-def set_subnet(subnet):
-    global PREFER_SUBNET
-    PREFER_SUBNET = subnet
-
-def broadcast_configure():
-    print("Configuring accelerometers with rate " + rates[samplerate] + " and range " + ranges[samplerange])
-    udp_broadcast(OPCODE_CONFIGURE + samplerate + samplerange)
-
-def signal_start():
-    udp_broadcast(OPCODE_START)
-    global ms
-    global streamingData
-    ms = 0
-    streamingData = True
-    print("Started data collection")
-
-def halt_data_collection():
-    udp_broadcast(OPCODE_HALT)
-    global streamingData
-    streamingData = False
-    print("Halted data collection")
-    pass
-
+# Formats a single client data event for fractions of Gs
 def format_event(clientId, event):
     output_arr = [None] * 5
     output_arr[0] = str(clientId)
@@ -216,6 +214,7 @@ def format_event(clientId, event):
     output_arr[4] = float(event[4]) / dividers[samplerange]
     return output_arr
 
+# Writes client data to CSV
 def write_data(filename):
     if filename.find('.csv') <= -1:
         filename = filename.strip() + '.csv'
@@ -236,11 +235,10 @@ def write_data(filename):
     print("Data written to " + filename)
     pass
 
+# Starts server threads (and user interface)
 def start():
     cpanel()
     global HOST
-    global CONTROL_PORT
-    global STATION_ID
     if HOST is None:
         _, HOST = get_interfaces()
     print("Starting station " + STATION_ID + "  on " + str(HOST) + " with port " + str(PORT))
@@ -255,6 +253,7 @@ def start():
     except Exception as e:
         print e
 
+# Outputs a matplotlib preview of client data
 def plot():
     print "Plotting preview..."
     global clients
@@ -287,6 +286,7 @@ def plot():
         y.scatter(ms, y_vals)
         z.scatter(ms, z_vals)
 
+# Builds export panel UI tab
 def build_export_panel():
     global clients
     export_text = widgets.Text(
@@ -312,6 +312,7 @@ def build_export_panel():
     export_panel = widgets.HBox([left, middle, right])
     return export_panel
 
+# Builds status panel UI tab
 def build_status_panel():
     global clients
     global sample_count_labels
@@ -346,6 +347,7 @@ def build_status_panel():
                                  widgets.VBox(col3_children), widgets.VBox(col4_children)])
     return status_panel
 
+# Builds settings panel UI tab
 def build_settings_panel():
     def get_new_value(change):
         if change['type'] == 'change' and change['name'] == 'value':
@@ -384,6 +386,7 @@ def build_settings_panel():
     config_options = widgets.HBox([label_box, settings_box])
     return config_options
 
+# Shows main user interface
 def cpanel():
     global _main_tabs
     _main_tabs = widgets.Tab()
@@ -399,7 +402,7 @@ def cpanel():
     _main_tabs.set_title(2, "Settings")
     display(_main_tabs)
 
-
+# Interactively configure server options before startup
 def configure():
     interfaces, default = get_interfaces()
     interfaces = widgets.Dropdown(
