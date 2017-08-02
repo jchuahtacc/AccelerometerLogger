@@ -7,8 +7,6 @@ WifiWrapper::WifiWrapper(int ledPin, const char* stationId, const char* clientId
   station_id = stationId;
   client_id = clientId;
   led = StatusLED(ledPin);
-  controlPort = -1;
-  dataPort = -1;
   blankIp = IPAddress(0, 0, 0 ,0);
   serverIp = blankIp;
 }
@@ -36,82 +34,59 @@ bool WifiWrapper::wifiConnect(const char* ssid, const char* password) {
   }
   Serial.println("WiFi Connected!");
 
-  // Start UDP listener  
+  // Start UDP listener
+  udp.begin(PORT);
   return true;
 }
 
-bool WifiWrapper::receivedValidServerInfo(void) {
-  return controlPort > 0 && dataPort > 0 && !(serverIp == blankIp);
+int WifiWrapper::parseCommand(void) {
+  int numBytes = udp.parsePacket();
+  char packetBuffer[512] = { 0 };
+  char opcode = ' ';
+  char tempRate = ' ';
+  char tempRange = ' ';
+  if (numBytes) {
+    udp.read(packetBuffer, numBytes);
+    opcode = packetBuffer[0];
+    if (opcode == OPCODE_ANNOUNCE && strstr(packetBuffer, station_id)) {
+      serverIp = udp.remoteIP();
+      return COMMAND_ANNOUNCE;
+    }
+    if (!(serverIp == udp.remoteIP())) {
+      return COMMAND_UNKNOWN;
+    }
+    switch (opcode) {
+      case OPCODE_KEEPALIVE : return COMMAND_KEEPALIVE; break;
+      case OPCODE_START : return COMMAND_START; break;
+      case OPCODE_HALT : return COMMAND_HALT; break;
+      case OPCODE_CONFIGURE : 
+        tempRate = packetBuffer[1];
+        tempRange = packetBuffer[2];
+        if (tempRate < CONFIG_1HZ || tempRate > CONFIG_400HZ) return COMMAND_CONFIG_ERROR;
+        if (tempRange < CONFIG_2G || tempRange > CONFIG_16G) return COMMAND_CONFIG_ERROR; 
+        requestedRate = tempRate;
+        requestedRange = tempRange;
+        return COMMAND_CONFIGURE;
+        break;
+      case OPCODE_PING : return COMMAND_PING; break;
+      default: return COMMAND_UNKNOWN; break;
+    }
+    return COMMAND_UNKNOWN;    
+  }
+  return COMMAND_NONE;
 }
 
-bool WifiWrapper::receiveServerInfo(void) {
-  broadcastListener.begin(9997);
-  char packetBuffer[512] = { 0 };
-  bool received = false;
-  int numBytes = 0;
-  while (!received) {
-    numBytes = broadcastListener.parsePacket();
-    if (numBytes) {
-      broadcastListener.read(packetBuffer, numBytes);
-      if (strstr(packetBuffer, station_id)) {
-        char* p = strchr(packetBuffer, ',') + 1;
-        int receivedControlPort = atoi(p);
-        p = strchr(p, ',') + 1;
-        int receivedDataPort = atoi(p);
-        if (receivedDataPort > 0 && receivedControlPort > 0) {
-          serverIp = broadcastListener.remoteIP();
-          controlPort = receivedControlPort;
-          dataPort = receivedDataPort;
-          Serial.print("IP: ");
-          Serial.println(serverIp);
-          Serial.print("Control Port: ");
-          Serial.println(controlPort);
-          Serial.print("Data Port: ");
-          Serial.println(dataPort);
-          received = true;
-          return true;
-        }
-      }
-    }
-    led.on();
-    delay(500);
-    yield();
-    led.off();
-    delay(500);
-    yield();
-  }
-}
 
 bool WifiWrapper::wifiConnected() {
   return WiFi.status() == WL_CONNECTED;
 }
 
-bool WifiWrapper::serverConnect() {
-  Serial.println("Attempting to connect to server");
-  if (!client.connect(serverIp, controlPort)) return false;
-//  memset(response_buffer, 0, 200);
-//  Serial.println("Sending hello");
-//  client.println("Hello!");
-  Serial.println("Server connected!");
-  sendClientId();
-  return true;  
-}
-
-bool WifiWrapper::serverConnect(IPAddress ip, int cport, int dport) {
-  serverIp = ip;
-  controlPort = cport;
-  dataPort = dport;
-  return serverConnect();
-}
-
 bool WifiWrapper::serverConnected() {
-  return client.connected();
+  return !(serverIp == blankIp);
 }
 
-bool WifiWrapper::sendKeepalive(void) {
-  if (!serverConnected()) return false;
-  client.println(OPCODE_KEEPALIVE);
-  return true;
+void WifiWrapper::dropServer() {
+  serverIp = blankIp;
 }
 
 bool WifiWrapper::send(long timestamp, int x, int y, int z) {
@@ -138,10 +113,29 @@ bool WifiWrapper::send(long timestamp, int x, int y, int z) {
   return true;
 }
 
+bool WifiWrapper::udp_send(char opcode, const char* data) {
+  memset(send_buffer, 0, sizeof send_buffer);
+  send_buffer[0] = opcode;
+  strcpy(&send_buffer[1], data);
+  if (udp.beginPacket(serverIp, PORT)) {
+    if (udp.endPacket()) {
+      return true;
+    } else {
+      return false;
+    }
+  } else {
+    return false;
+  }
+}
+
 void WifiWrapper::sendClientId() {
-  client.println(client_id);
-  Serial.println("Sent client id:");
-  Serial.println(client_id);
+  memset(send_buffer, 0, sizeof send_buffer);
+  send_buffer[0] = RESPONSECODE_CLIENT;
+  sprintf(&send_buffer[1], "%s", client_id);
+  udp.beginPacket(serverIp, PORT);
+  udp.write(send_buffer, strlen(send_buffer));
+  udp.endPacket();
+  Serial.println("Sent client ID");
 }
 
 void WifiWrapper::flush(void) {
@@ -149,11 +143,12 @@ void WifiWrapper::flush(void) {
   /*
   client.println(send_buffer);
   */
-  udp.beginPacket(serverIp, dataPort);
+  udp.beginPacket(serverIp, PORT);
   udp.write(send_buffer, strlen(send_buffer));
   udp.endPacket();
   
   memset(send_buffer, 0, SEND_BUFFER_LENGTH);
+  send_buffer[0] = RESPONSECODE_DATA;
   Serial.print("Flushing ");
   Serial.print(writesSinceFlush);
   Serial.print(" data points for ");
@@ -162,28 +157,4 @@ void WifiWrapper::flush(void) {
   writesSinceFlush = 0;
 }
 
-int WifiWrapper::getCommand(void) {
-  if (!serverConnected()) return COMMAND_DISCONNECTED;
-  if (!client.available()) return COMMAND_NONE;
-  char opcode = client.read();
-  // Serial.print("Opcode: " );
-  // Serial.println(opcode);
-  switch (opcode) {
-    case OPCODE_KEEPALIVE : return COMMAND_KEEPALIVE; break;
-    case OPCODE_START : return COMMAND_START; break;
-    case OPCODE_HALT : return COMMAND_HALT; break;
-    case OPCODE_CONFIGURE : 
-      // Serial.println("Checking OPCODE_CONFIGURE");
-      if (!client.available()) return COMMAND_CONFIG_ERROR; 
-      if (!(client.peek() >= CONFIG_1HZ && client.peek() <= CONFIG_400HZ)) return COMMAND_CONFIG_ERROR;
-      requestedRate = client.read();
-      if (!(client.peek() >= CONFIG_2G && client.peek() <= CONFIG_16G)) return COMMAND_CONFIG_ERROR; 
-      requestedRange = client.read();
-      return COMMAND_CONFIGURE;
-      break;
-    case OPCODE_PING : return COMMAND_PING; break;
-    default: return COMMAND_UNKNOWN; break;
-  }
-  return COMMAND_UNKNOWN;
-}
 

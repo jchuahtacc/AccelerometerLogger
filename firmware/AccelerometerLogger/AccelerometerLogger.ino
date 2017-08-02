@@ -7,6 +7,9 @@
 // Also, edit the stationID variable so that your accelerometer can listen
 // for server announcements
 
+#define TIMEOUT   11000
+#define KEEPALIVE_TIMEOUT 2000
+
 #include "utility/Adafruit_LIS3DH.h"
 #include <Adafruit_Sensor.h>
 #include <ESP8266WiFi.h>
@@ -17,7 +20,7 @@
 const char* ssid = "codetacc";              // your WiFi access point
 const char* password = "codetacc";          // your WiFi password
 const char* stationId = "codetacc";         // your accelerometer station ID
-const char* clientId = "alpha";              // this Accelerometer's client ID
+const char* clientId = "delta";              // this Accelerometer's client ID
 
 #define STATUS_LED 0
 
@@ -32,13 +35,16 @@ void configureAccelerometer(void);
 void startStreaming(void);
 void haltStreaming(void);
 void flashPing(void);
+void receiveAnnounce(void);
+void timeOut(void);
 
 int eventCount = 0;
 int flushCount = 0;
 long startTime = 0;
 bool sending = false;
 
-long lastKeepalive = 0;
+long lastKeepAlive = 0;
+long lastCommand = 0;
 
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
@@ -61,50 +67,43 @@ void loop() {
     yield();
     wifi.wifiConnect(ssid, password);
   } else {
-    if (!wifi.receivedValidServerInfo()) {
-      Serial.println("Waiting for server info");
-      wifi.receiveServerInfo();
-      Serial.println("Received server info");
-    } else if (!wifi.serverConnected()) {
-      Serial.println("Server disconnected...");
-      led.pulse(1);
-      delay(100);
-      yield();
-      wifi.serverConnect();
-    } else {
-      int command = wifi.getCommand();
-      switch (command) {
-        case COMMAND_CONFIG_ERROR : configError(); break;
-        case COMMAND_UNKNOWN : commandError(); break;
-        case COMMAND_CONFIGURE : configureAccelerometer(); break;
-        case COMMAND_START : startStreaming(); break;
-        case COMMAND_HALT : haltStreaming(); break;
-        case COMMAND_PING : flashPing(); break;
-      }
-      led.on();
+    int command = wifi.parseCommand();
+    switch (command) {
+      case COMMAND_CONFIG_ERROR : configError(); break;
+      case COMMAND_UNKNOWN : commandError(); break;
+      case COMMAND_CONFIGURE : configureAccelerometer(); break;
+      case COMMAND_START : startStreaming(); break;
+      case COMMAND_HALT : haltStreaming(); break;
+      case COMMAND_PING : flashPing(); break;
+      case COMMAND_ANNOUNCE : receiveAnnounce(); break;
+    }
+    if (sending) {
       if (accel.dataReady()) {
         accel.read();
-        if (sending) {
-          led.off();
-          if (!wifi.send(millis() - startTime, accel.x, accel.y, accel.z)) {
-            Serial.println("Couldn't send data to the server");
-            led.pulse(5);
-          }
-          led.on();
+        led.off();
+        if (!wifi.send(millis() - startTime, accel.x, accel.y, accel.z)) {
+          Serial.println("Couldn't send data to the server");
+          led.pulse(5);
         }
+        delay(1);
+        led.on();
       }
-      if (millis() - lastKeepalive > 800) {
-        //Serial.println("Sending keepalive");
-        lastKeepalive = millis();
-        if (!sending) {
-          if (!wifi.sendKeepalive()) {
-            Serial.println("Keepalive couldn't be sent to the server");
-            led.pulse(5);
-          }
-        }
+    } else if (command == COMMAND_NONE) {
+      if (millis() - lastCommand > TIMEOUT) {
+        timeOut();
+        led.on();
+        delay(500);
+        yield();
+        led.off();
+        delay(500);
       }
-      delay(1);
-      yield();
+    } else {
+      led.on();
+      lastCommand = millis();
+    }
+    if (millis() - lastKeepAlive > KEEPALIVE_TIMEOUT) {
+      wifi.sendClientId();
+      lastKeepAlive = millis();
     }
   }
 }
@@ -138,6 +137,16 @@ void commandError() {
 
 void configError() {
   Serial.println("Got a bad configuration parameter from the server");
+}
+
+void receiveAnnounce() {
+  Serial.println("Received server announcement");
+  wifi.sendClientId();
+}
+
+void timeOut() {
+  Serial.println("Server timed out");
+  wifi.dropServer();
 }
 
 void configureAccelerometer() {

@@ -27,10 +27,12 @@ import matplotlib.pyplot as plt
 # from multiprocessing import Process
 
 HOST = None
-CONTROL_PORT = 9999
-DATA_PORT = 9998
+PORT = 9999
+#DATA_PORT = 9998
 STATION_ID = "codetacc"
 PREFER_SUBNET = "192.168"
+
+CLIENT_TIMEOUT = 15000
 
 STATE_DISCONNECTED = "DISCONNECTED";
 STATE_CONNECTED = "CONNECTED";
@@ -42,6 +44,9 @@ OPCODE_START = 's'
 OPCODE_HALT = 'h'
 OPCODE_KEEPALIVE = 'k'
 OPCODE_PING = 'p'
+OPCODE_ANNOUNCE = 'a'
+RESPONSECODE_CLIENT = 'c'
+RESPONSECODE_DATA = 'd'
 
 quit = False
 samplerate = "g"
@@ -67,124 +72,89 @@ _status_panel = None
 _export_panel = None
 _settings_panel = None
 
-class AnnounceThread(Thread):
+
+def udp_send(ip, data):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, 0)
+    s.connect((ip, PORT))
+    s.send(data)
+    s.close()
+
+def udp_broadcast(data):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('', 0))
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    s.sendto(data, ('<broadcast>', PORT))
+    s.close()
+
+def send_configuration(ip):
+    udp_send(ip, OPCODE_CONFIGURE + samplerate + samplerange)
+
+class MonitorThread(Thread):
     def __init__(self):
         self.stopped = False
         Thread.__init__(self)
 
     def run(self):
-        global HOST
-        global STATION_ID
-        global CONTROL_PORT
-        global DATA_PORT
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('', 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        data = STATION_ID + "," + str(CONTROL_PORT) + "," + str(DATA_PORT) + "\n"
         while not self.stopped:
-            s.sendto(data, ('<broadcast>', 9997))
+            # Announce this station
+            udp_broadcast(OPCODE_ANNOUNCE + " " + STATION_ID)
+
+            # Check for timed out clients
+            client_lock.acquire()
+            for ip, client in clients.iteritems():
+                if time.time() - client.last_announce > CLIENT_TIMEOUT:
+                    client.state = STATE_DISCONNECTED
+            client_lock.release()
+
+            # Wait 5 seconds
             time.sleep(5)
 
 class AccelerometerClient(object):
-    def __init__(self, socket):
+    def __init__(self, ip, clientId):
         self.state = STATE_CONNECTED
         self.events = list()
-        self.socket = socket
-        self.ip = socket.getpeername()[0]
-        self.clientId = ""
+        self.ip = ip
+        self.clientId = clientId
+        self.update_announce()
 
-class DataStreamHandler(SocketServer.BaseRequestHandler):
+    def update_announce(self):
+        self.last_announce = time.time()
+
     def chunk(self, l, n):
         for i in xrange(0, len(l), n):
             yield l[i:i + n]
 
-    def handle(self):
+    def process_data(self, data):
         global ms
-        data = self.request[0].strip()
-        if len(data):
-            client = clients[self.client_address[0]]
-            client.events.extend(self.chunk(data.split(' '), 5))
-            last_event = client.events[-1]
-            last_time = int(last_event[1])
-            if last_time > ms + 200:
-                ms = last_time
-                update_status()
+        self.events.extend(self.chunk(data.split(' '), 5))
+        last_event = self.events[-1]
+        last_time = int(last_event[1])
+        self.update_announce()
+        if last_time > ms + 200:
+            ms = last_time
+            update_status()
 
-
-class AccelerometerHandler(SocketServer.BaseRequestHandler):
-    def readClientId(self):
-        clientIdReceived = False
-        clientId = ""
-        while not clientIdReceived:
-            char = self.request.recv(1)
-            clientId = clientId + char
-            clientIdReceived = char == "\n" or char == "\r"
-        return clientId.strip()
-
-    def setup(self):
-        print("Client attempting connection")
-        global _main_tabs
-        global _status_panel
-        if not (self.request.getpeername()[0] in clients):
-            client_lock.acquire()
-            self.client = AccelerometerClient(self.request)
-            clients[self.client.ip] = self.client
-            self.client.clientId = self.readClientId()
-            _status_panel = build_status_panel()
-            _main_tabs.children = [ _status_panel, _export_panel, _settings_panel ]
-            print(self.client.clientId + " connected")
-            try:
-                self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
-            except Exception:
-                print("Error configuring new client")
-            finally:
-                client_lock.release()
-        else:
-            self.client = clients[self.request.getpeername()[0]]
-            self.client.state = STATE_CONNECTED
-            self.client.socket = self.request
-            self.client.clientId = self.readClientId()
-            global status_labels
-            status_labels[self.client.clientId].value = STATE_CONNECTED
-            print(self.client.clientId + " reconnected")
-            try:
-                self.request.sendall(str(OPCODE_CONFIGURE + samplerate + samplerange))
-            except Exception:
-                print("Error reconfiguring client upon reconnect")
-
+class AccelUDPHandler(SocketServer.BaseRequestHandler):
     def handle(self):
-        disconnected = False
-        numTimeouts = 0
-        self.request.settimeout(2)
-        while not quit and not disconnected:
-            time.sleep(1)
-            try:
-                self.data = self.request.recv(1024).strip()
-                if self.data == OPCODE_KEEPALIVE:
-                    # print "Keep alive"
-                    self.data = None
-                    numTimeouts = 0
-            except Exception as e:
-                if not streamingData:
-                    if isinstance(e, socket.timeout):
-                        numTimeouts = numTimeouts + 1
-                        disconnected = numTimeouts > 5
-                        if disconnected:
-                            print self.client.clientId + " timed out"
-                            disconnected = False
+        global clients
+        packet = self.request[0].strip()
+        if len(packet):
+            client_ip = self.client_address[0]
+            if packet[0] == RESPONSECODE_CLIENT:
+                if client_ip not in clients:
+                    if client_ip not in clients:
+                        client_lock.acquire()
+                        clients[client_ip] = AccelerometerClient(client_ip, packet[1:])
+                        client_lock.release()
+                        _status_panel = build_status_panel()
+                        _main_tabs.children = [ _status_panel, _export_panel, _settings_panel ]
+                        print(clients[client_ip].clientId + " connected")
+                        send_configuration(client_ip)
                     else:
-                        disconnected = True
-
-    def finish(self):
-        if self.client.ip in clients:
-            print(str(self.client.clientId) + " disconnected")
-            global status_labels
-            status_labels[self.client.clientId].value = STATE_DISCONNECTED
-            self.client.state = STATE_DISCONNECTED
-            self.request.close()
-
-class ThreadedTCPServer(SocketServer.ThreadingMixIn, SocketServer.TCPServer):
-    pass
+                        clients[client_ip].update_announce()
+            elif packet[0] == RESPONSECODE_DATA:
+                if client_ip in clients:
+                    clients[client_ip].process_data(packet[1:])
 
 class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
     pass
@@ -214,41 +184,24 @@ def update_status():
     for _, client in clients.iteritems():
         sample_count_labels[client.clientId].value = str(len(client.events))
 
-def broadcast(command, newstate=None):
-    for key in clients:
-        try:
-            client = clients[key]
-            client.socket.sendall(command)
-            if not newstate is None:
-                client.state = newstate
-        except Exception:
-            print("Error sending command to " + str(client.ip))
-
 def set_subnet(subnet):
     global PREFER_SUBNET
     PREFER_SUBNET = subnet
 
 def broadcast_configure():
-    global samplerate
-    global samplerange
-    cmdstring = OPCODE_CONFIGURE + samplerate + samplerange
     print("Configuring accelerometers with rate " + rates[samplerate] + " and range " + ranges[samplerange])
-    broadcast(cmdstring)
-
-
+    udp_broadcast(OPCODE_CONFIGURE + samplerate + samplerange)
 
 def signal_start():
-    broadcast(OPCODE_START, STATE_RUNNING)
+    udp_broadcast(OPCODE_START)
     global ms
     global streamingData
     ms = 0
     streamingData = True
     print("Started data collection")
-    pass
-
 
 def halt_data_collection():
-    broadcast(OPCODE_HALT, STATE_CONNECTED)
+    udp_broadcast(OPCODE_HALT)
     global streamingData
     streamingData = False
     print("Halted data collection")
@@ -262,7 +215,6 @@ def format_event(clientId, event):
     output_arr[3] = float(event[3]) / dividers[samplerange]
     output_arr[4] = float(event[4]) / dividers[samplerange]
     return output_arr
-
 
 def write_data(filename):
     if filename.find('.csv') <= -1:
@@ -288,25 +240,18 @@ def start():
     cpanel()
     global HOST
     global CONTROL_PORT
-    global DATA_PORT
     global STATION_ID
     if HOST is None:
         _, HOST = get_interfaces()
-    print("Starting station " + STATION_ID + "  on " + str(HOST) + " with control port " + str(CONTROL_PORT) + " and data port " + str(DATA_PORT) + "...")
+    print("Starting station " + STATION_ID + "  on " + str(HOST) + " with port " + str(PORT))
     try:
-        global announce_thread
-        announce_thread = AnnounceThread()
-        announce_thread.start()
-        controlServer = ThreadedTCPServer((HOST, CONTROL_PORT), AccelerometerHandler)
-        controlThread = Thread(target=controlServer.serve_forever)
-        controlThread.start()
-        dataServer = ThreadedUDPServer((HOST, DATA_PORT), DataStreamHandler)
-        dataThread = Thread(target=dataServer.serve_forever)
-        dataThread.start()
+        global monitor_thread
+        monitor_thread = MonitorThread()
+        monitor_thread.start()
+        accelServer = ThreadedUDPServer((HOST, PORT), AccelUDPHandler)
+        accelThread = Thread(target=accelServer.serve_forever)
+        accelThread.start()
         print("Server is listening")
-        #announce_thread.join()
-        #controlThread.join()
-        #dataThread.join()
     except Exception as e:
         print e
 
@@ -431,6 +376,7 @@ def build_settings_panel():
         options = list(zip(["2 G", "4 G", "8 G", "16 G"], ["a", "b", "c", "d"])),
         value = samplerange
     )
+    range_setting.observe(range_setting_change)
     labels = [widgets.Label(value=x) for x in ["Rate", "Range"]]
     settings = [rate_setting, range_setting]
     label_box = widgets.VBox(labels)
@@ -460,14 +406,9 @@ def configure():
         options = interfaces,
         value = default,
     )
-    cport = widgets.Text(
+    port = widgets.Text(
         value='9999',
-        placeholder='Control Port',
-        disabled=False
-    )
-    dport = widgets.Text(
-        value='9998',
-        placeholder='Data Port',
+        placeholder='Port',
         disabled=False
     )
     server_id_text = widgets.Text(
@@ -484,8 +425,8 @@ def configure():
         layout=widgets.Layout(width="100%")
     )
 
-    left_box = widgets.VBox([ widgets.Label(value=x, disabled=True) for x in ["Interface", "Control Port", "Data Port", "Station ID", ""] ])
-    right_box = widgets.VBox([interfaces, cport, dport, server_id_text, go])
+    left_box = widgets.VBox([ widgets.Label(value=x, disabled=True) for x in ["Interface", "Port", "Station ID", ""] ])
+    right_box = widgets.VBox([interfaces, port, server_id_text, go])
     settings_box = widgets.HBox([left_box, right_box])
     settings_panel = widgets.VBox([header, settings_box])
     def start_clicked(b):
@@ -493,12 +434,10 @@ def configure():
         cpanel()
         global STATION_ID
         global HOST
-        global CONTROL_PORT
-        global DATA_PORT
+        global PORT
 
         HOST = interfaces.value
-        CONTROL_PORT = int(cport.value)
-        DATA_PORT = int(dport.value)
+        PORT = int(port.value)
         STATION_ID = server_id_text.value
         start()
 
