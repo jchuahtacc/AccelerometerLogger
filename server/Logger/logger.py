@@ -15,7 +15,7 @@ import ipywidgets as widgets
 import matplotlib.pyplot as plt
 
 # Configuration options
-HOST = b"192.168.8.158"
+HOST = None
 PORT = 9999
 STATION_ID = "codetacc"
 PREFER_SUBNET = "192.168"
@@ -73,6 +73,7 @@ def udp_send(ip, data):
 
 def udp_broadcast(data):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('', 0))
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     s.sendto(data.encode(), (b'<broadcast>', PORT))
     s.close()

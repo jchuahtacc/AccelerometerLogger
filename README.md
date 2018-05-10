@@ -26,6 +26,7 @@ You may download the entire repository [using this link](https://github.com/jchu
 
 ### Required Python Packages
 - jupyter
+- matplotlib
 
 ### License
 
