@@ -24,6 +24,10 @@ You may download the entire repository [using this link](https://github.com/jchu
 - The ability to install some software
 - Some light coding and the ability to run a Python script
 
+### Required Python Packages
+- jupyter
+- matplotlib
+
 ### License
 
 This software and associated materials are Copyright (c) 2016 by the Texas Advanced Computing Center, protected under the MIT License. [Full text of the license can be found here](./LICENSE.txt).

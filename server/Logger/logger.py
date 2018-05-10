@@ -4,7 +4,7 @@
 #
 # Accelerometer server helper code
 
-import SocketServer
+import socketserver
 import socket
 import time
 from threading import Thread, Lock
@@ -75,7 +75,7 @@ def udp_broadcast(data):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.bind(('', 0))
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    s.sendto(data, ('<broadcast>', PORT))
+    s.sendto(data.encode(), (b'<broadcast>', PORT))
     s.close()
 
 def send_configuration(ip):
@@ -110,7 +110,7 @@ class MonitorThread(Thread):
 
             # Check for timed out clients
             client_lock.acquire()
-            for ip, client in clients.iteritems():
+            for ip, client in clients:
                 if time.time() - client.last_announce > CLIENT_TIMEOUT:
                     client.state = STATE_DISCONNECTED
             client_lock.release()
@@ -146,7 +146,7 @@ class AccelerometerClient(object):
             update_status()
 
 # UDP listener that responds to packets sent by clients
-class AccelUDPHandler(SocketServer.BaseRequestHandler):
+class AccelUDPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         global clients
 
@@ -175,7 +175,7 @@ class AccelUDPHandler(SocketServer.BaseRequestHandler):
                     clients[client_ip].process_data(packet[1:])
 
 # Required mix-in class for threaded UDP server
-class ThreadedUDPServer(SocketServer.ThreadingMixIn, SocketServer.UDPServer):
+class ThreadedUDPServer(socketserver.ThreadingMixIn, socketserver.UDPServer):
     pass
 
 # Get a list of local interfaces and a good guess as to which interface to use
@@ -201,7 +201,7 @@ def update_status():
     global sample_count_labels
     global ms
     milliseconds_label.value = str(ms)
-    for _, client in clients.iteritems():
+    for client in clients:
         sample_count_labels[client.clientId].value = str(len(client.events))
 
 # Formats a single client data event for fractions of Gs
@@ -251,11 +251,11 @@ def start():
         accelThread.start()
         print("Server is listening")
     except Exception as e:
-        print e
+        print(e)
 
 # Outputs a matplotlib preview of client data
 def plot():
-    print "Plotting preview..."
+    print("Plotting preview...")
     global clients
     f, subplots = plt.subplots(len(clients), 3, sharex='col', sharey='row')
     for i in range(len(clients.keys())):
@@ -332,7 +332,7 @@ def build_status_panel():
     col2_children = [ widgets.Label() ] * 3
     col3_children = [ widgets.Label(value="Milliseconds", layout=widgets.Layout(width="100%")), widgets.Label(), widgets.Label(value="Status") ]
     col4_children = [ milliseconds_label, widgets.Label(), widgets.Label("Samples")]
-    for _, accel in clients.iteritems():
+    for _, accel in clients:
         col2_children.append(widgets.Label(value=accel.clientId))
         status_labels[accel.clientId] = widgets.Label(
             value=accel.state,
